@@ -337,6 +337,12 @@ function spcontactform_overview() {
   $markup = '<table><tr><th>Webformulier</th><th>Formulier veld &#8594; Civi data</th><th>Civi groepen</th><th>Hou hoog</th><th></th></tr>';
   foreach ($sync_data as $data) {
     $form = node_load($data['webform']);
+    // If form doesn't exist, clear sync data for this form.
+    if ($form === FALSE) {
+      unset($sync_data[$data['webform']]);
+      variable_set('spcontactform_sync_data', $sync_data);
+      continue;
+    }
     $markup .= '<tr><td><a href="/node/'. $form->nid . '">'.$form->title.'</a></td><td><table>';
     foreach ($data_names as $key => $name) {
       if (!empty($data[$key . '_component'])) {
@@ -361,6 +367,7 @@ function spcontactform_overview() {
     $markup .= '<td><a href="/admin/config/sp/spcontactform/delete/' . $form->nid . '">verwijder</a></td></tr>';
   }
   $markup .= '</table>';
+  $markup .= '<pre>' . print_r($sync_data, TRUE) . '</pre>';
 
   return $markup;
 }

@@ -103,18 +103,80 @@ function spcontactform_parse_webform_select_options($webform, $selected_componen
   return $options;
 }
 
-function spcontactform_get_data_names() {
-  $data_names = array(
-    'name' => 'naam',
-    'first_name' => 'voornaam',
-    'preposition' => 'tussenvoegsel',
-    'last_name' => 'achternaam',
-    'email' => 'e-mail',
-    'telephone' => 'telefoon',
-    'street' => 'straat',
-    'house_number' => 'huisnummer',
-    'postal_code' => 'postcode',
-    'locality' => 'Plaats',
-  );
-  return $data_names;
+/**
+ * Parses submission data with sync info in raw data array to sync.
+ */
+function spcontactform_parse_submission($submission, $sync_data) {
+  $sync_items = spcontactform_get_data_names(); 
+  foreach ($sync_items as $key => $name) {
+    if (isset($sync_data[$key . '_component'])) {
+      if (!empty($submission->data[$sync_data[$key . '_component']][0])) {
+        $var = $submission->data[$sync_data[$key . '_component']][0];
+        $var_clean = call_user_func('spcontactform_valid_' . $key, $var);
+        if (!empty($var_clean)) {
+          $data[$key] = $var_clean;
+        }
+      }
+    }
+  }
+  return $data;
+}
+
+/**
+ * Checks wether a submission contains sufficient data to create civi contact.
+ */
+function spcontactform_check_submission($data) {
+  // Check if values are sufficient to create civi contact.
+  if 
+    (
+      !empty($data['email']) ||
+      !empty($data['telephone']) ||
+      (
+        !empty($data['street_and_number']) &&
+        !empty($data['locality'])
+
+      ) ||
+      (
+        !empty($data['house_number']) &&
+        (
+          (
+            !empty($data['street']) &&
+            !empty($data['locality'])
+          ) ||
+          !empty($data['postal_code'])
+        )
+      )
+    ) {
+    drupal_set_message('Contact can be made!');
+    return TRUE;
+  }
+  drupal_set_message('Contact kan niet worden gemaakt!', 'error');
+  return FALSE;
+}
+
+function spcontactform_sync_contact($data, $sync_data) {
+  // Find similar existing contacts in civi.
+  $similar_contacts = spcontactform_find_similar_contacts($data, $sync_data);
+  // Sync contact.
+  if (!empty($similar_contacts)) {
+    $contact = spcontactform_add_contact($data, $sync_data);
+  }
+  else {
+    $contact = spcontactform_merge_contact($data, $sync_data, $similar_contacts);
+  }
+  // Add contact to groups.
+  spcontactform_contact_add_groups($submission, $sync_data, $contact);
+}
+
+function spcontactform_find_similar_contacts($data, $sync_data) {
+  return array();
+}
+
+function spcontactform_add_contact($data, $sync_data) {
+}
+
+function spcontactform_merge_contact($data, $sync_data, $similar_contacts) {
+}
+
+function spcontactform_contact_add_groups($data, $sync_data, $contact) {
 }
