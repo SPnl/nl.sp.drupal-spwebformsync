@@ -1,0 +1,75 @@
+<?php
+
+/**   
+ * Implements hook_init().
+ */ 
+function spcontactform_init() {
+  module_load_include("inc", "spcontactform", "spcontactform");
+}   
+
+/**
+ * Implements hook_menu().
+ */
+function spcontactform_menu() {
+  $items = array();
+
+  $items['admin/config/sp/spcontactform'] = array(
+    'title' => 'SP Contactform',
+    'type' => MENU_CALLBACK,
+    'page callback' => 'spcontactform_overview',
+    'file' => 'spcontactform.admin.inc',
+    'access callback' => sprbs_access_check(),
+  );
+
+  $items['admin/config/sp/spcontactform/overview'] = array(
+    'title' => 'Overzicht SP contactformulieren',
+    'type' => MENU_DEFAULT_LOCAL_TASK,
+    'weight' => '0',
+  );
+
+  $items['admin/config/sp/spcontactform/add'] = array(
+    'title' => 'SP Contactform',
+    'type' => MENU_LOCAL_TASK,
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('spcontactform_admin_form'),
+    'file' => 'spcontactform.admin.inc',
+    'access callback' => sprbs_access_check(),
+  );
+
+  $items['admin/config/sp/spcontactform/settings'] = array(
+    'title' => 'Instellingen',
+    'type' => MENU_LOCAL_TASK,
+    'page callback'  => 'drupal_get_form',
+    'page arguments' => array('spcontactform_settings_form'),
+    'file' => 'spcontactform.admin.inc',
+    'access callback' => sprbs_access_check(),
+    'weight' => '1',
+  );
+
+  $items['admin/config/sp/spcontactform/delete/%'] = array(
+    'title' => 'SP contactform delete',
+    'page callback' => 'spcontactform_delete',
+    'page arguments' => array(5),
+    'access callback' => sprbs_access_check(),
+    'type' => MENU_CALLBACK,
+    'file' => 'spcontactform.admin.inc',
+  );
+
+  $items['spcontactform/group/autocomplete'] = array(
+    'title' => 'SP contactform autocomplete',
+    'page callback' => 'spcontactform_group_autocomplete',
+    'access callback' => sprbs_access_check(),
+    'type' => MENU_CALLBACK,
+    'file' => 'spcontactform.admin.inc',
+  );
+
+  return $items;
+}
+
+/**
+ *  Implements hook_webform_submission_insert.
+ */
+function spcontactform_webform_submission_insert($node, $submission) {
+  dpm($node);
+  dpm($submission);
+}
