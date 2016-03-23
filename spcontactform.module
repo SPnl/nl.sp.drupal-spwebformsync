@@ -4,7 +4,8 @@
  * Implements hook_init().
  */ 
 function spcontactform_init() {
-  module_load_include("inc", "spcontactform", "spcontactform");
+  module_load_include("inc", "spcontactform", "spcontactform.form");
+  module_load_include("inc", "spcontactform", "spcontactform.processing");
   module_load_include("inc", "spcontactform", "spcontactform.settings");
 }   
 
@@ -87,16 +88,5 @@ function spcontactform_node_delete($node) {
  *  Implements hook_webform_submission_insert.
  */
 function spcontactform_webform_submission_insert($node, $submission) {
-  $sync_data_all = variable_get('spcontactform_sync_data', array());
-  // Check if there is a spcontactform for this webform.
-  if (isset($sync_data_all[$submission->nid])) {
-    $sync_data = $sync_data_all[$submission->nid];
-    // Parse data.
-    $data = spcontactform_parse_submission($submission, $sync_data);
-    // Check if submission contains data nescesarry to create contact.
-    if (spcontactform_check_submission($data)) {
-      // Sync contact.
-      $contact = spcontactform_sync_contact($data, $sync_data);
-    }
-  }
+  spcontactform_process_submission($submission);
 }
