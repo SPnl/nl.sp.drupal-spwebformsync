@@ -143,47 +143,35 @@ function spcontactform_admin_form($form, &$form_state) {
       $webform_components = spcontactform_get_webform_allowed_components($webform_default, array('select' => 'select'));
       if (!empty($webform_components)) {
         $webform_component_select_options = webform_component_list($webform, $webform_components, FALSE);
-        $form['hou_hoog']['hou_hoog_component'] = array(
-          '#type' => 'select',
-          '#title' => 'Formulier veld',
-          '#options' => $webform_component_select_options,
-          '#empty_option' => '- Geen -',
-          '#ajax' => array(
-            'wrapper' => 'spcontactform_ajax_form',
-            'callback' => 'spcontactform_ajax_form_callback',
-          ),
-        );
-        if (!empty($form_state['values']['hou_hoog_component'])) {
-          $selected_component = $form_state['values']['hou_hoog_component'];
-          $hou_hoog_accept_value_options = spcontactform_parse_webform_select_options($webform, $selected_component);
-          $form['hou_hoog']['hou_hoog_accept_value'] = array(
+        if (!empty(variable_get('spcontactform_hou_hoog_group', FALSE))) {
+          $form['hou_hoog']['hou_hoog_component'] = array(
             '#type' => 'select',
-            '#title' => 'Bij formulier veld waarde',
-            '#options' => $hou_hoog_accept_value_options,
+            '#title' => 'Formulier veld',
+            '#options' => $webform_component_select_options,
             '#empty_option' => '- Geen -',
             '#ajax' => array(
               'wrapper' => 'spcontactform_ajax_form',
               'callback' => 'spcontactform_ajax_form_callback',
             ),
           );
-          if (!empty($form_state['values']['hou_hoog_group'])) {
-            $group_raw = $form_state['values']['hou_hoog_group'];
-            preg_match('@^.+\(([0-9]+)\)$@', $group_raw, $matches);
-            if (!empty($matches[1])) {
-              $group = $matches[1];
-              $form_state['storage']['hou_hoog_group'] = array(
-                $group => $groups[$group],
-              );
-            }
+          if (!empty($form_state['values']['hou_hoog_component'])) {
+            $selected_component = $form_state['values']['hou_hoog_component'];
+            $hou_hoog_accept_value_options = spcontactform_parse_webform_select_options($webform, $selected_component);
+            $form['hou_hoog']['hou_hoog_accept_value'] = array(
+              '#type' => 'select',
+              '#title' => 'Bij formulier veld waarde',
+              '#options' => $hou_hoog_accept_value_options,
+              '#empty_option' => '- Geen -',
+              '#ajax' => array(
+                'wrapper' => 'spcontactform_ajax_form',
+                'callback' => 'spcontactform_ajax_form_callback',
+              ),
+            );
           }
-          $form['hou_hoog']['hou_hoog_group'] = array(
-            '#type' => 'textfield',
-            '#title' => 'contact toevoegen aan groep',
-            '#autocomplete_path' => 'spcontactform/group/autocomplete',
-            '#ajax' => array(
-              'wrapper' => 'spcontactform_ajax_form',
-              'callback' => 'spcontactform_ajax_form_callback',
-            ),
+        }
+        else {
+          $form['hou_hoog']['hou_hoog_no_setting'] = array(
+            '#markup' => '<p>Kies in de instellingen eerst een groep waaraan de deelnemers moeten worden toegevoegd die op de hoogte willen blijven van belangrijk SP nieuws.</p>', 
           );
         }
       }
@@ -245,14 +233,8 @@ function spcontactform_admin_form_validate($form, &$form_state) {
   if (empty($form_state['storage']['selected_groups'])) {
     form_set_error('group_select', 'Selecteer groep(en) waar contact aan moet worden toegevoegd!');
   }
-  if (
-    !empty($values['hou_hoog_component']) &&
-    (
-      empty($values['hou_hoog_accept_value']) ||
-      empty($values['hou_hoog_group'])
-    )
-  ) {
-  form_set_error('hou_hoog', "Vul alle velden in voor 'hou op de hoogte'!");
+  if (!empty($values['hou_hoog_component']) && empty($values['hou_hoog_accept_value'])) {
+    form_set_error('hou_hoog', "Kies de conditie waarbij mensen op de hoogte willen blijven.");
   }
 }
 
@@ -266,7 +248,6 @@ function spcontactform_admin_form_submit($form, &$form_state) {
   );
   $storage_values = array(
     'selected_groups',
-    'hou_hoog_group',
   );
   foreach ($static_fields as $key) {
     if (isset($values[$key])) {
@@ -289,27 +270,69 @@ function spcontactform_admin_form_submit($form, &$form_state) {
 }
 
 function spcontactform_settings_form($form, &$form_state) {
-  // Get options.
+  // Synchronization type.
+  if (empty(variable_get('spcontactform_sync_type', FALSE))) {
+    variable_set('spcontactform_sync_type', 'cron');
+  }
+  $form['spcontactform_sync_type'] = array(
+    '#type' => 'radios',
+    '#title' => 'Hoe wilt u contacten synchronizeren?',
+    '#default_value' => variable_get('spcontactform_sync_type', array()),
+    '#options' => array('cron' => 'Cron', 'direct' => 'Direct'),
+    '#required' => TRUE,
+  );
+
+  // Max sync items per cron.
+  $form['spcontactform_cron_number'] = array(
+    '#type' => 'select',
+    '#title' => 'Hoeveel webformulier inzendingen moeten per cron gesynchronizeerd worden?',
+    '#default_value' => variable_get('spcontactform_cron_number', 0),
+    '#options' => range(0, 500, 10),
+    '#states' => array(
+      'visible' => array(
+        ':input[name="spcontactform_sync_type"]' => array('value' => 'cron'),
+      ),
+    ),
+  );
+
+  // Get webform component options.
   $component_types = module_invoke_all('webform_component_info');
+  $options = array();
   if (!empty($component_types)) {
     foreach ($component_types as $key => $component_type) {
       $options[$key] = $component_type['label'];
     }
-    // Create form element.
-    $form['spcontactform_allowed_component_types'] = array(
-      '#type' => 'checkboxes',
-      '#title' => 'Kies webformulier veld types om te synchronizeren.',
-      '#options' => $options,
-      '#default_value' => variable_get('spcontactform_allowed_component_types', array()),
-    );
-    return system_settings_form($form);
   }
   else {
-    $form['no_components'] = array(
-      '#markup' => '<p>Er is geen webformulier veldtype gevonden.</p>',
-    );
-    return $form;
+    drupal_set_message('Er is geen webformulier veldtype gevonden.', 'error');
   }
+  // Select webform component types form.
+  $form['spcontactform_allowed_component_types'] = array(
+    '#type' => 'checkboxes',
+    '#title' => 'Kies webformulier veld types om te synchronizeren.',
+    '#options' => $options,
+    '#default_value' => variable_get('spcontactform_allowed_component_types', array()),
+  );
+  $groups = spcontactform_get_civi_groups();
+  $form['spcontactform_hou_hoog_group'] = array(
+    '#type' => 'select',
+    '#title' => 'Kies de groep van mensen die op de hoogte willen blijven van belangrijk SP nieuws.',
+    '#options' => $groups,
+    '#empty_option' => '- Geen -',
+    '#default_value' => variable_get('spcontactform_hou_hoog_group', array()),
+  );
+  $tags = spcontactform_get_civi_tags();
+  if (empty(variable_get('spcontactform_unverified_tag', FALSE)) && $id = array_search('Ongecontroleerd', $tags)) {
+    variable_set('spcontactform_unverified_tag', $id);
+  }
+  $form['spcontactform_unverified_tag'] = array(
+    '#type' => 'select',
+    '#title' => 'Kies de tag die moet worden toegevoegd aan contacten die handmatig moeten worden gecontroleerd.',
+    '#options' => $tags,
+    '#empty_option' => '- Geen -',
+    '#default_value' => variable_get('spcontactform_unverified_tag', array()),
+  );
+  return system_settings_form($form);
 }
 
 function spcontactform_group_autocomplete($string) {
@@ -358,8 +381,8 @@ function spcontactform_overview() {
     else {
       $markup .= 'Geen';
     }
-    if (isset($data['hou_hoog_component'])) {
-      $markup .= '</td><td><table><tr><td>Veld:&nbsp;</td><td>' . $form->webform['components'][$data['hou_hoog_component']]['name'] . '</td></tr><tr><td>Conditie:&nbsp;</td><td>' . $data['hou_hoog_accept_value'] . '</td></tr><tr><td>Groep:&nbsp;</td><td>' . array_pop($data['hou_hoog_group']) . '</td></tr></table></td>';
+    if (!empty($data['hou_hoog_component'])) {
+      $markup .= '</td><td><table><tr><td>Veld:&nbsp;</td><td>' . $form->webform['components'][$data['hou_hoog_component']]['name'] . '</td></tr><tr><td>Conditie:&nbsp;</td><td>' . $data['hou_hoog_accept_value'] . '</td></tr></table></td>';
     }
     else {
       $markup .= '</td><td>Geen</td>';

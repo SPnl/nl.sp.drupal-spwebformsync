@@ -7,6 +7,7 @@ function spcontactform_init() {
   module_load_include("inc", "spcontactform", "spcontactform.form");
   module_load_include("inc", "spcontactform", "spcontactform.processing");
   module_load_include("inc", "spcontactform", "spcontactform.settings");
+  module_load_include('inc', 'webform', 'includes/webform.submissions');
 }   
 
 /**
@@ -88,5 +89,48 @@ function spcontactform_node_delete($node) {
  *  Implements hook_webform_submission_insert.
  */
 function spcontactform_webform_submission_insert($node, $submission) {
-  spcontactform_process_submission($submission);
+  $sync_data = variable_get('spcontactform_sync_data', FALSE);
+  if (!empty($sync_data) && isset($sync_data[$node->nid])) {
+    $sync_type = variable_get('spcontactform_sync_type'); 
+    switch ($sync_type) {
+    case 'direct':
+      spcontactform_process_submission($submission);
+      break;
+    case 'cron':
+      $postphoned_submission_syncs = variable_get('spcontactform_postphoned_submission_syncs', array());
+      $postphoned_submission_syncs[$node->nid][$submission->sid] = $submission->sid;
+      variable_set('spcontactform_postphoned_submission_syncs', $postphoned_submission_syncs);
+    }
+  }
+}
+
+/*
+ * Implements hook_cron().
+ *
+ * Syncs not yet synced webform submissions.
+ */
+function spcontactform_cron() {
+  $synced = 0;
+  $max_cron_number = variable_get('spcontactform_cron_number', 0);
+  $sync_data = variable_get('spcontactform_sync_data', FALSE);
+  if (!empty($sync_data)) {
+    $postphoned_submission_syncs = variable_get('spcontactform_postphoned_submission_syncs', array());
+    foreach ($sync_data as $webform_id => $data) {
+      if (!empty($postphoned_submission_syncs[$webform_id])) {
+        foreach ($postphoned_submission_syncs[$webform_id] as $key => $submission_id) {
+          $submission = webform_get_submission($webform_id, $submission_id);
+          if (!empty($submission)) {
+            // Break out of loop when max number of syncs is reached.
+            if ($synced >= $max_cron_number) {
+              break 2;
+            }
+            spcontactform_process_submission($submission);
+            $synced ++;
+            unset($postphoned_submission_syncs[$webform_id][$key]);
+          }
+        }
+      }
+    }
+    variable_set('spcontactform_postphoned_submission_syncs', $postphoned_submission_syncs);
+  }
 }

@@ -15,12 +15,12 @@ function spcontactform_get_data_names() {
     'last_name' => 'achternaam',
     'email' => 'e-mail',
     'telephone' => 'telefoon',
-    #'street' => 'straat',
-    #'house_number' => 'huisnummer',
-    #'house_number_addition' => 'toevoeging',
-    #'street_and_number' => 'straat en huisnummer',
-    #'postal_code' => 'postcode',
-    #'locality' => 'Plaats',
+    'street' => 'straat',
+    'house_number' => 'huisnummer',
+    'house_number_addition' => 'toevoeging',
+    'street_and_number' => 'straat en huisnummer',
+    'postal_code' => 'postcode',
+    'locality' => 'Plaats',
   );
   return $data_names;
 }

@@ -93,6 +93,47 @@ function spcontactform_get_civi_groups($sync = TRUE) {
   return $groups;
 }
 
+function spcontactform_get_civi_tags($sync = TRUE) {
+  if ($sync) {
+    $tags = &drupal_static(__FUNCTION__);
+    if (!isset($tags)) {
+
+      if ($cache = cache_get('spcontactform_civi_tags')) {
+        $tags = $cache->data;
+      }
+      else {
+        $tags = array();
+        set_time_limit(0);
+        $spcivi = \SPCivi::getInstance();
+        $params = array(
+          'sequential'            => 1,
+          'option.limit'          => 9999,
+          'is_selectable' => 1,
+          'used_for' => 'civicrm_contact',
+        );
+        $tags_results = $spcivi->api('Tag', 'get', $params);
+        if (_spcf_check_result($tags_results, 'tags', 'get')) {
+          if (!empty($tags_results['values'])) {
+            foreach ($tags_results['values'] as $value) {
+              $tags[$value['id']] = $value['name'];
+            }
+            asort($tags);
+            variable_set('spcontactform_civi_tags', $tags);
+          }
+          else {
+            drupal_set_message('Error syncing civicrm tags, using saved data.', 'warning');
+          }
+        }
+      } 
+      $tags = variable_get('spcontactform_civi_tags', array());
+      cache_set('spcontactform_civi_tags', $tags, 'cache', time() + 3600);
+    }
+    return $tags;
+  }
+  $tags = variable_get('spcontactform_civi_tags', array());
+  return $tags;
+}
+
 function spcontactform_parse_webform_select_options($webform, $selected_component) {
   $options = array();
   if (!empty($webform->webform['components'][$selected_component]['extra']['items'])) {
