@@ -5,17 +5,17 @@
  * ---------------------------------------------------------------------------
  */
 
-function spcontactform_process_submission($submission) {
-  $sync_data_all = variable_get('spcontactform_sync_data', array());
-  // Check if there is a spcontactform for this webform.
+function spwebformsync_process_submission($submission) {
+  $sync_data_all = variable_get('spwebformsync_sync_data', array());
+  // Check if there is a spwebformsync for this webform.
   if (isset($sync_data_all[$submission->nid])) {
     $sync_data = $sync_data_all[$submission->nid];
     // Parse data.
-    $data = spcontactform_parse_submission($submission, $sync_data);
+    $data = spwebformsync_parse_submission($submission, $sync_data);
     // Check if submission contains data nescesarry to create contact.
-    if (spcontactform_check_submission_sufficient($data)) {
+    if (spwebformsync_check_submission_sufficient($data)) {
       // Sync contact.
-      $contact = spcontactform_sync_contact($submission, $data, $sync_data);
+      $contact = spwebformsync_sync_contact($submission, $data, $sync_data);
     }
   }
 }
@@ -23,14 +23,14 @@ function spcontactform_process_submission($submission) {
 /**
  * Parses submission data with sync info in raw data array to sync.
  */
-function spcontactform_parse_submission($submission, $sync_data) {
+function spwebformsync_parse_submission($submission, $sync_data) {
   $data = array();
-  $sync_items = spcontactform_get_data_names(); 
+  $sync_items = spwebformsync_get_data_names(); 
   foreach ($sync_items as $key => $name) {
     if (isset($sync_data[$key . '_component'])) {
       if (!empty($submission->data[$sync_data[$key . '_component']][0])) {
         $var = $submission->data[$sync_data[$key . '_component']][0];
-        $var_clean = call_user_func('spcontactform_valid_' . $key, $var);
+        $var_clean = call_user_func('spwebformsync_valid_' . $key, $var);
         if (!empty($var_clean)) {
           $data[$key] = $var_clean;
         }
@@ -40,7 +40,7 @@ function spcontactform_parse_submission($submission, $sync_data) {
   // If name item, then if possible, set first name, middle_name, and last name.
   if (!empty($data['name'])) {
     // Check if name contains prepositon.
-    $split_name = spcontactform_split_name($data['name']);
+    $split_name = spwebformsync_split_name($data['name']);
     $parts = array('first_name', 'middle_name', 'last_name');
     foreach ($parts as $part) {
       if (isset($split_name[$part])) {
@@ -55,7 +55,7 @@ function spcontactform_parse_submission($submission, $sync_data) {
 /**
  * Checks wether a submission contains sufficient data to create civi contact.
  */
-function spcontactform_check_submission_sufficient($data) {
+function spwebformsync_check_submission_sufficient($data) {
   // Check if values are sufficient to create civi contact.
   if 
     (
@@ -83,23 +83,23 @@ function spcontactform_check_submission_sufficient($data) {
   return FALSE;
 }
 
-function spcontactform_sync_contact($submission, $data, $sync_data) {
+function spwebformsync_sync_contact($submission, $data, $sync_data) {
   // Find similar existing contacts in civi.
-  $same_contacts = spcontactform_find_same_contacts($data);
+  $same_contacts = spwebformsync_find_same_contacts($data);
   // Sync contact.
   if (empty($same_contacts) || count($same_contacts) > 1) {
-    $contact = spcontactform_add_contact($data, $sync_data);
+    $contact = spwebformsync_add_contact($data, $sync_data);
   }
   else {
-    $contact = spcontactform_merge_contacts($data, $sync_data, $same_contacts);
+    $contact = spwebformsync_merge_contacts($data, $sync_data, $same_contacts);
   }
   if (!empty($contact)) {
     // Add contact to groups.
-    spcontactform_contact_add_groups($submission, $sync_data, $contact);
+    spwebformsync_contact_add_groups($submission, $sync_data, $contact);
   }
 }
 
-function spcontactform_find_same_contacts($data) {
+function spwebformsync_find_same_contacts($data) {
   $spcivi = \SPCivi::getInstance();
   $same_contacts = array();
 
@@ -164,10 +164,10 @@ function spcontactform_find_same_contacts($data) {
   return $same_contacts;
 }
 
-function spcontactform_add_contact($data, $sync_data) {
+function spwebformsync_add_contact($data, $sync_data) {
   global $base_url;
   $spcivi = \SPCivi::getInstance();
-  $sync_items = spcontactform_get_data_names(); 
+  $sync_items = spwebformsync_get_data_names(); 
 
   // Create contact source line.
   $webform = node_load($sync_data['webform']);
@@ -181,7 +181,7 @@ function spcontactform_add_contact($data, $sync_data) {
   );
   $params = array(
     'contact_type' => 'Individual',
-    'contact_source' => 'SP contactformulier: ' . $webform->title . ' (' . $site_name . ')',
+    'contact_source' => 'SP webformsync: ' . $webform->title . ' (' . $site_name . ')',
   );
   foreach ($autosync as $key => $civikey) {
     if (!empty($data[$key])) {
@@ -255,7 +255,7 @@ function spcontactform_add_contact($data, $sync_data) {
       _spcf_check_result($create_address_results, 'adressen', 'create');
     }
     // If available set unverified tag.
-    $tag_id = variable_get('spcontactform_unverified_tag', FALSE);
+    $tag_id = variable_get('spwebformsync_unverified_tag', FALSE);
     if (!empty($tag_id)) {
       $params = array(
         'contact_id' => $contact_id,
@@ -269,7 +269,7 @@ function spcontactform_add_contact($data, $sync_data) {
   return FALSE;
 }
 
-function spcontactform_merge_contacts($data, $sync_data, $same_contacts) {
+function spwebformsync_merge_contacts($data, $sync_data, $same_contacts) {
   $spcivi = \SPCivi::getInstance();
 
   // Get contact.
@@ -441,7 +441,7 @@ function spcontactform_merge_contacts($data, $sync_data, $same_contacts) {
   }
 }
 
-function spcontactform_contact_add_groups($submission, $sync_data, $contact) {
+function spwebformsync_contact_add_groups($submission, $sync_data, $contact) {
 
   $spcivi = \SPCivi::getInstance();
   $groups = array();
@@ -450,7 +450,7 @@ function spcontactform_contact_add_groups($submission, $sync_data, $contact) {
       $selected_hou_hoog_value = $submission->data[$sync_data['hou_hoog_component']][0];
       $hou_hoog_accept_value = $sync_data['hou_hoog_accept_value'];
       if ($selected_hou_hoog_value == $hou_hoog_accept_value) {
-        $hou_hoog_group_id = variable_get('spcontactform_hou_hoog_group', FALSE);
+        $hou_hoog_group_id = variable_get('spwebformsync_hou_hoog_group', FALSE);
         if (!empty($hou_hoog_group_id)) {
           $groups[$hou_hoog_group_id] = $hou_hoog_group_id;
         }
@@ -470,7 +470,7 @@ function spcontactform_contact_add_groups($submission, $sync_data, $contact) {
   }
 }
 
-function spcontactform_split_name($name) {
+function spwebformsync_split_name($name) {
   $name = trim($name);
   // If name contains only lowercase words, make all first characters uppercase.
   $spaceless = str_replace(' ', '', $name);

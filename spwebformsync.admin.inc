@@ -1,11 +1,11 @@
 <?php
 
-function spcontactform_admin_form($form, &$form_state) {
+function spwebformsync_admin_form($form, &$form_state) {
   //dpm($form_state);
   //dpm($form_state['storage']);
   $form = array();
 
-  $form['#prefix'] = '<div id="spcontactform_ajax_form">';
+  $form['#prefix'] = '<div id="spwebformsync_ajax_form">';
   $form['#suffix'] = '</div>';
 
 
@@ -13,7 +13,7 @@ function spcontactform_admin_form($form, &$form_state) {
   // ----------------------------------------------------------
 
   // Get data.
-  $webforms = spcontactform_get_webforms();
+  $webforms = spwebformsync_get_webforms();
   if (!empty($webforms)) {
     foreach ($webforms as $webform) {
       $webform_select_options[$webform->nid] = $webform->title;
@@ -29,8 +29,8 @@ function spcontactform_admin_form($form, &$form_state) {
       '#options' => $webform_select_options,
       '#empty_option' => 'Kies:',
       '#ajax' => array(
-        'wrapper' => 'spcontactform_ajax_form',
-        'callback' => 'spcontactform_ajax_form_callback',
+        'wrapper' => 'spwebformsync_ajax_form',
+        'callback' => 'spwebformsync_ajax_form_callback',
       ),
     );
   }
@@ -48,15 +48,15 @@ function spcontactform_admin_form($form, &$form_state) {
     // Add select field components.
     // ----------------------------------------------------------
 
-    $data_names = spcontactform_get_data_names();
-    $allowed_types = variable_get('spcontactform_allowed_component_types', array());
-    $webform_components = spcontactform_get_webform_allowed_components($webform_default, $allowed_types);
+    $data_names = spwebformsync_get_data_names();
+    $allowed_types = variable_get('spwebformsync_allowed_component_types', array());
+    $webform_components = spwebformsync_get_webform_allowed_components($webform_default, $allowed_types);
     if (!empty($webform_components)) {
       $webform = node_load($webform_default);
       $webform_component_select_options = webform_component_list($webform, $webform_components, FALSE);
       $form['fields'] = array(
         '#type' => 'fieldset',
-        '#title' => 'Selecteer te synchronizeren formulier velden',
+        '#title' => 'Selecteer te synchronizeren webformulier velden',
       );
 
       foreach ($data_names as $data_key => $data_name) {
@@ -67,8 +67,8 @@ function spcontactform_admin_form($form, &$form_state) {
           '#options' => $webform_component_select_options,
           '#empty_option' => '- Geen -',
           '#ajax' => array(
-            'wrapper' => 'spcontactform_ajax_form',
-            'callback' => 'spcontactform_ajax_form_callback',
+            'wrapper' => 'spwebformsync_ajax_form',
+            'callback' => 'spwebformsync_ajax_form_callback',
           ),
         );
 
@@ -82,7 +82,7 @@ function spcontactform_admin_form($form, &$form_state) {
       // -----------------------------------------------------------------
 
       // Make sure the groups are cached before autocompleting.
-      $groups = spcontactform_get_civi_groups();
+      $groups = spwebformsync_get_civi_groups();
 
       $form['group_select'] = array(
         '#type' => 'fieldset',
@@ -116,17 +116,17 @@ function spcontactform_admin_form($form, &$form_state) {
       }
       $form['group_select']['selected_groups'] = array(
         '#type' => 'markup',
-        '#prefix' => '<div id="spcontactform_selected_groups">',
+        '#prefix' => '<div id="spwebformsync_selected_groups">',
         '#suffix' => '</div>',
         '#markup' => $markup,
       );
       $form['group_select']['groups'] = array(
         '#type' => 'textfield',
         '#title' => 'Selecteer groep',
-        '#autocomplete_path' => 'spcontactform/group/autocomplete',
+        '#autocomplete_path' => 'spwebformsync/group/autocomplete',
         '#ajax' => array(
-          'wrapper' => 'spcontactform_ajax_form',
-          'callback' => 'spcontactform_ajax_form_callback',
+          'wrapper' => 'spwebformsync_ajax_form',
+          'callback' => 'spwebformsync_ajax_form_callback',
         ),
       );
 
@@ -135,8 +135,8 @@ function spcontactform_admin_form($form, &$form_state) {
         '#value' => 'Leeg selectie',
         '#name' => 'reset_groups',
         '#ajax' => array(
-          'wrapper' => 'spcontactform_ajax_form',
-          'callback' => 'spcontactform_ajax_form_callback',
+          'wrapper' => 'spwebformsync_ajax_form',
+          'callback' => 'spwebformsync_ajax_form_callback',
         ),
       );
 
@@ -147,31 +147,31 @@ function spcontactform_admin_form($form, &$form_state) {
         '#title' => 'Hou op de hoogte van SP nieuws.',
       );
 
-      $webform_components = spcontactform_get_webform_allowed_components($webform_default, array('select' => 'select'));
+      $webform_components = spwebformsync_get_webform_allowed_components($webform_default, array('select' => 'select'));
       if (!empty($webform_components)) {
         $webform_component_select_options = webform_component_list($webform, $webform_components, FALSE);
-        if (!empty(variable_get('spcontactform_hou_hoog_group', FALSE))) {
+        if (!empty(variable_get('spwebformsync_hou_hoog_group', FALSE))) {
           $form['hou_hoog']['hou_hoog_component'] = array(
             '#type' => 'select',
             '#title' => 'Formulier veld',
             '#options' => $webform_component_select_options,
             '#empty_option' => '- Geen -',
             '#ajax' => array(
-              'wrapper' => 'spcontactform_ajax_form',
-              'callback' => 'spcontactform_ajax_form_callback',
+              'wrapper' => 'spwebformsync_ajax_form',
+              'callback' => 'spwebformsync_ajax_form_callback',
             ),
           );
           if (!empty($form_state['values']['hou_hoog_component'])) {
             $selected_component = $form_state['values']['hou_hoog_component'];
-            $hou_hoog_accept_value_options = spcontactform_parse_webform_select_options($webform, $selected_component);
+            $hou_hoog_accept_value_options = spwebformsync_parse_webform_select_options($webform, $selected_component);
             $form['hou_hoog']['hou_hoog_accept_value'] = array(
               '#type' => 'select',
               '#title' => 'Bij formulier veld waarde',
               '#options' => $hou_hoog_accept_value_options,
               '#empty_option' => '- Geen -',
               '#ajax' => array(
-                'wrapper' => 'spcontactform_ajax_form',
-                'callback' => 'spcontactform_ajax_form_callback',
+                'wrapper' => 'spwebformsync_ajax_form',
+                'callback' => 'spwebformsync_ajax_form_callback',
               ),
             );
           }
@@ -184,7 +184,7 @@ function spcontactform_admin_form($form, &$form_state) {
       }
       else {
         $form['hou_hoog']['hou_hoog_no_components'] = array(
-          '#markup' => '<p>Er zijn geen geschikte webformulier velden gevonden.</p>', 
+          '#markup' => '<p>Er zijn geen geschikte webformulier velden gevonden. (Zijn de gewenste veldtypes <a href="/admin/config/sp/spwebformsync/settings">geselecteerd</a>?)</p>', 
         );
       }
       $form['submit'] = array(
@@ -195,7 +195,7 @@ function spcontactform_admin_form($form, &$form_state) {
     }
     else {
       $form['no_components'] = array(
-        '#markup' => '<p>Er zijn geen geschikte webformulier velden gevonden.</p>', 
+        '#markup' => '<p>Er zijn geen geschikte webformulier velden gevonden. (Zijn de gewenste veldtypes <a href="/admin/config/sp/spwebformsync/settings">geselecteerd</a>?)</p>', 
       );
     }
 
@@ -203,11 +203,11 @@ function spcontactform_admin_form($form, &$form_state) {
   return $form;
 }
 
-function spcontactform_ajax_form_callback($form, &$form_state) {
+function spwebformsync_ajax_form_callback($form, &$form_state) {
   return $form;
 }
 
-function spcontactform_admin_form_validate($form, &$form_state) {
+function spwebformsync_admin_form_validate($form, &$form_state) {
   // Empty selected groups if reset_groups button was clicked.
   if (
     !empty($form_state['triggering_element']['#name']) &&
@@ -245,9 +245,9 @@ function spcontactform_admin_form_validate($form, &$form_state) {
   }
 }
 
-function spcontactform_admin_form_submit($form, &$form_state) {
+function spwebformsync_admin_form_submit($form, &$form_state) {
   $values = $form_state['values'];
-  $sync_data = variable_get('spcontactform_sync_data', array());
+  $sync_data = variable_get('spwebformsync_sync_data', array());
   // Store data.
   $static_fields = array(
     'webform',
@@ -271,43 +271,43 @@ function spcontactform_admin_form_submit($form, &$form_state) {
       $sync_data[$values['webform']][$key] = $value;
     }
   }
-  variable_set('spcontactform_sync_data', $sync_data);
-  drupal_set_message('SP Contactform synchronizatie is toegevoegd.');
-  $form_state['redirect'] = 'admin/config/sp/spcontactform';
+  variable_set('spwebformsync_sync_data', $sync_data);
+  drupal_set_message('SP weboformulier synchronizatie is toegevoegd.');
+  $form_state['redirect'] = 'admin/config/sp/spwebformsync';
 }
 
-function spcontactform_settings_form($form, &$form_state) {
+function spwebformsync_settings_form($form, &$form_state) {
   // Synchronization type.
-  if (empty(variable_get('spcontactform_sync_type', FALSE))) {
-    variable_set('spcontactform_sync_type', 'cron');
+  if (empty(variable_get('spwebformsync_sync_type', FALSE))) {
+    variable_set('spwebformsync_sync_type', 'cron');
   }
-  $form['spcontactform_sync_settings'] = array(
+  $form['spwebformsync_sync_settings'] = array(
     '#type' => 'fieldset',
     '#title' => 'Cron instellingen',
   );
-  $form['spcontactform_sync_settings']['spcontactform_sync_type'] = array(
+  $form['spwebformsync_sync_settings']['spwebformsync_sync_type'] = array(
     '#type' => 'radios',
     '#title' => 'Hoe wilt u contacten synchronizeren?',
-    '#default_value' => variable_get('spcontactform_sync_type', array()),
+    '#default_value' => variable_get('spwebformsync_sync_type', array()),
     '#options' => array('cron' => 'Cron', 'direct' => 'Direct'),
     '#required' => TRUE,
   );
 
   // Max sync items per cron.
-  $form['spcontactform_sync_settings']['spcontactform_cron_number'] = array(
+  $form['spwebformsync_sync_settings']['spwebformsync_cron_number'] = array(
     '#type' => 'select',
     '#title' => 'Hoeveel webformulier inzendingen moeten per cron gesynchronizeerd worden?',
-    '#default_value' => variable_get('spcontactform_cron_number', 0),
+    '#default_value' => variable_get('spwebformsync_cron_number', 0),
     '#options' => range(0, 500, 10),
     '#states' => array(
       'visible' => array(
-        ':input[name="spcontactform_sync_type"]' => array('value' => 'cron'),
+        ':input[name="spwebformsync_sync_type"]' => array('value' => 'cron'),
       ),
     ),
   );
 
   // Webform settings.
-  $form['spcontactform_webform_settings'] = array(
+  $form['spwebformsync_webform_settings'] = array(
     '#type' => 'fieldset',
     '#title' => 'Webformulier instellingen',
   );
@@ -323,46 +323,46 @@ function spcontactform_settings_form($form, &$form_state) {
     drupal_set_message('Er is geen webformulier veldtype gevonden.', 'error');
   }
   // Select webform component types form.
-  $form['spcontactform_webform_settings']['spcontactform_allowed_component_types'] = array(
+  $form['spwebformsync_webform_settings']['spwebformsync_allowed_component_types'] = array(
     '#type' => 'checkboxes',
     '#title' => 'Kies webformulier veld types om te synchronizeren.',
     '#options' => $options,
-    '#default_value' => variable_get('spcontactform_allowed_component_types', array()),
+    '#default_value' => variable_get('spwebformsync_allowed_component_types', array()),
   );
 
   // Civicrm settings.
-  $form['spcontactform_civicrm_settings'] = array(
+  $form['spwebformsync_civicrm_settings'] = array(
     '#type' => 'fieldset',
     '#title' => 'CiviCRM synchronizatie instellingen',
   );
-  $groups = spcontactform_get_civi_groups();
-  $form['spcontactform_civicrm_settings']['spcontactform_hou_hoog_group'] = array(
+  $groups = spwebformsync_get_civi_groups();
+  $form['spwebformsync_civicrm_settings']['spwebformsync_hou_hoog_group'] = array(
     '#type' => 'select',
     '#title' => 'Kies de groep van mensen die op de hoogte willen blijven van belangrijk SP nieuws.',
     '#options' => $groups,
     '#empty_option' => '- Geen -',
-    '#default_value' => variable_get('spcontactform_hou_hoog_group', array()),
+    '#default_value' => variable_get('spwebformsync_hou_hoog_group', array()),
   );
-  $tags = spcontactform_get_civi_tags();
-  if (empty(variable_get('spcontactform_unverified_tag', FALSE)) && $id = array_search('Ongecontroleerd', $tags)) {
-    variable_set('spcontactform_unverified_tag', $id);
+  $tags = spwebformsync_get_civi_tags();
+  if (empty(variable_get('spwebformsync_unverified_tag', FALSE)) && $id = array_search('Ongecontroleerd', $tags)) {
+    variable_set('spwebformsync_unverified_tag', $id);
   }
-  $form['spcontactform_civicrm_settings']['spcontactform_unverified_tag'] = array(
+  $form['spwebformsync_civicrm_settings']['spwebformsync_unverified_tag'] = array(
     '#type' => 'select',
     '#title' => 'Kies de tag die moet worden toegevoegd aan contacten die handmatig moeten worden gecontroleerd.',
     '#options' => $tags,
     '#empty_option' => '- Geen -',
-    '#default_value' => variable_get('spcontactform_unverified_tag', array()),
+    '#default_value' => variable_get('spwebformsync_unverified_tag', array()),
   );
   return system_settings_form($form);
 }
 
-function spcontactform_group_autocomplete($string) {
+function spwebformsync_group_autocomplete($string) {
   $string = strtolower($string);
   $matches = array();
   if (strlen($string) > 2) {
     $matches = array();
-    $groups = spcontactform_get_civi_groups();
+    $groups = spwebformsync_get_civi_groups();
 
     foreach ($groups as $key => $group) {
       if (strpos(strtolower($group), $string) !== FALSE) {
@@ -376,24 +376,25 @@ function spcontactform_group_autocomplete($string) {
   drupal_json_output($matches);
 }
 
-function spcontactform_overview() {
-  $sync_data = variable_get('spcontactform_sync_data', array());
+function spwebformsync_overview() {
+  $sync_data = variable_get('spwebformsync_sync_data', array());
   if (!empty($sync_data)) {
-    $postphoned_submission_syncs = variable_get('spcontactform_postphoned_submission_syncs', array());
-    $data_names = spcontactform_get_data_names();
-    $markup = '<table><tr><th>Webformulier</th><th>Formulier veld &#8594; Civi data</th><th>Civi groepen</th><th>Hou hoog</th><th>Cron wachtrij</th><th></th></tr>';
+    $postphoned_submission_syncs = variable_get('spwebformsync_postphoned_submission_syncs', array());
+    $data_names = spwebformsync_get_data_names();
+    $markup = '<table><tr><th>Webformulier</th><th>Webformulier &#8594; Civicrm</th><th>Civi groepen</th><th>Hou hoog</th><th>Cron wachtrij</th><th></th></tr>';
     foreach ($sync_data as $data) {
       $form = node_load($data['webform']);
+      $postphoned_number = isset($postphoned_submission_syncs[$form->nid]) ? count($postphoned_submission_syncs[$form->nid]) : 0;
       // If form doesn't exist, clear sync data for this form.
       if ($form === FALSE) {
         unset($sync_data[$data['webform']]);
-        variable_set('spcontactform_sync_data', $sync_data);
+        variable_set('spwebformsync_sync_data', $sync_data);
         continue;
       }
       $markup .= '<tr><td><a href="/node/'. $form->nid . '">'.$form->title.'</a></td><td><table>';
       foreach ($data_names as $key => $name) {
         if (!empty($data[$key . '_component'])) {
-          $markup .= '<tr><td>' . $form->webform['components'][$data[$key . '_component']]['name'] . '</td><td>&nbsp;&#8594;&nbsp;</td><td>' . $name . '</td></tr>';
+          $markup .= '<tr><td>' . $form->webform['components'][$data[$key . '_component']]['name'] . '</td><td>&nbsp;&#8594;&nbsp;</td><td>' . ucfirst($name) . '</td></tr>';
         }
       }
       $markup .= '</table></td><td>';
@@ -411,33 +412,33 @@ function spcontactform_overview() {
       else {
         $markup .= '</td><td>Geen</td>';
       }
-      $markup .= '<td>' . count($postphoned_submission_syncs[$form->nid]) . '</td>';
-      $markup .= '<td><a href="/admin/config/sp/spcontactform/delete/' . $form->nid . '">verwijder</a></td></tr>';
+      $markup .= '<td>' . $postphoned_number . '</td>';
+      $markup .= '<td><a href="/admin/config/sp/spwebformsync/delete/' . $form->nid . '">verwijder</a></td></tr>';
     }
     $markup .= '</table>';
   }
   else {
-    $markup = 'Er zijn nog geen SP <a href="/admin/config/sp/spcontactform/add">contactformulieren</a> toegevoegd.';
+    $markup = 'Er zijn nog geen SP <a href="/admin/config/sp/spwebformsync/add">webformulier synchronizaties</a> toegevoegd.';
   }
 
   return $markup;
 }
 
-function spcontactform_delete($id) {
-  $sync_data = variable_get('spcontactform_sync_data', array());
-  $postphoned_submission_syncs = variable_get('spcontactform_postphoned_submission_syncs', array());
+function spwebformsync_delete($id) {
+  $sync_data = variable_get('spwebformsync_sync_data', array());
+  $postphoned_submission_syncs = variable_get('spwebformsync_postphoned_submission_syncs', array());
   if (!empty($postphoned_submission_syncs[$id])) {
     unset($postphoned_submission_syncs[$id]);
-    variable_set('spcontactform_postphoned_submission_syncs', $postphoned_submission_syncs);
-    drupal_set_message('Cron wachtrij contactform nr. ' . $id . ' is verwijderd.');
+    variable_set('spwebformsync_postphoned_submission_syncs', $postphoned_submission_syncs);
+    drupal_set_message('Cron wachtrij webformulier synchronizatie nr. ' . $id . ' is verwijderd.');
   }
   if (isset($sync_data[$id])) {
     unset($sync_data[$id]);
-    variable_set('spcontactform_sync_data', $sync_data);
-    drupal_set_message('SP contactform nr. ' . $id . ' is verwijderd.');
+    variable_set('spwebformsync_sync_data', $sync_data);
+    drupal_set_message('SP webformulier synchronizatie nr. ' . $id . ' is verwijderd.');
   }
   else {
-    drupal_set_message('SP contactform nr. ' . $id . ' kon niet worden verwijderd.', 'error');
+    drupal_set_message('SP webformulier synchronizatie nr. ' . $id . ' kon niet worden verwijderd.', 'error');
   }
-  drupal_goto('/admin/config/sp/spcontactform');
+  drupal_goto('/admin/config/sp/spwebformsync');
 }

@@ -1,0 +1,136 @@
+<?php
+
+/**   
+ * Implements hook_init().
+ */ 
+function spwebformsync_init() {
+  module_load_include("inc", "spwebformsync", "spwebformsync.form");
+  module_load_include("inc", "spwebformsync", "spwebformsync.processing");
+  module_load_include("inc", "spwebformsync", "spwebformsync.settings");
+  module_load_include('inc', 'webform', 'includes/webform.submissions');
+}   
+
+/**
+ * Implements hook_menu().
+ */
+function spwebformsync_menu() {
+  $items = array();
+
+  $items['admin/config/sp/spwebformsync'] = array(
+    'title' => 'SP webformulier synchronizatie',
+    'type' => MENU_NORMAL_ITEM,
+    'page callback' => 'spwebformsync_overview',
+    'file' => 'spwebformsync.admin.inc',
+    'access callback' => sprbs_access_check(),
+  );
+
+  $items['admin/config/sp/spwebformsync/overview'] = array(
+    'title' => 'Overzicht SP webformulier synchronizaties',
+    'type' => MENU_DEFAULT_LOCAL_TASK,
+    'weight' => '0',
+  );
+
+  $items['admin/config/sp/spwebformsync/add'] = array(
+    'title' => 'SP webformulier synchronizatie toevoegen',
+    'type' => MENU_LOCAL_TASK,
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('spwebformsync_admin_form'),
+    'file' => 'spwebformsync.admin.inc',
+    'access callback' => sprbs_access_check(),
+  );
+
+  $items['admin/config/sp/spwebformsync/settings'] = array(
+    'title' => 'Instellingen',
+    'type' => MENU_LOCAL_TASK,
+    'page callback'  => 'drupal_get_form',
+    'page arguments' => array('spwebformsync_settings_form'),
+    'file' => 'spwebformsync.admin.inc',
+    'access callback' => sprbs_access_check(),
+    'weight' => '1',
+  );
+
+  $items['admin/config/sp/spwebformsync/delete/%'] = array(
+    'title' => 'SP webformulier synchronizatie verwijderen',
+    'page callback' => 'spwebformsync_delete',
+    'page arguments' => array(5),
+    'access callback' => sprbs_access_check(),
+    'type' => MENU_CALLBACK,
+    'file' => 'spwebformsync.admin.inc',
+  );
+
+  $items['spwebformsync/group/autocomplete'] = array(
+    'title' => 'SP webformsync autocomplete',
+    'page callback' => 'spwebformsync_group_autocomplete',
+    'access callback' => sprbs_access_check(),
+    'type' => MENU_CALLBACK,
+    'file' => 'spwebformsync.admin.inc',
+  );
+
+  return $items;
+}
+
+/**
+ *  Implements hook_node_delete.
+ */
+function spwebformsync_node_delete($node) {
+  // Delete spwebformsync sync data if webform is deleted.
+  if ($node->type === 'webform') {
+    $sync_data = variable_get('spwebformsync_sync_data', array());
+    // Check if there is a spwebformsync for this webform.
+    if (isset($sync_data[$node->nid])) {
+      unset($sync_data[$node->nid]);
+      variable_set('spwebformsync_sync_data', $sync_data);
+      drupal_set_message('SP Webform sync nr. ' . $node->nid . ' attached to this form has been deleted.', 'warning');
+    }
+  }
+}
+
+/**
+ *  Implements hook_webform_submission_insert.
+ */
+function spwebformsync_webform_submission_insert($node, $submission) {
+  $sync_data = variable_get('spwebformsync_sync_data', FALSE);
+  if (!empty($sync_data) && isset($sync_data[$node->nid])) {
+    $sync_type = variable_get('spwebformsync_sync_type'); 
+    switch ($sync_type) {
+    case 'direct':
+      spwebformsync_process_submission($submission);
+      break;
+    case 'cron':
+      $postphoned_submission_syncs = variable_get('spwebformsync_postphoned_submission_syncs', array());
+      $postphoned_submission_syncs[$node->nid][$submission->sid] = $submission->sid;
+      variable_set('spwebformsync_postphoned_submission_syncs', $postphoned_submission_syncs);
+    }
+  }
+}
+
+/*
+ * Implements hook_cron().
+ *
+ * Syncs not yet synced webform submissions.
+ */
+function spwebformsync_cron() {
+  $synced = 0;
+  $max_cron_number = variable_get('spwebformsync_cron_number', 0);
+  $sync_data = variable_get('spwebformsync_sync_data', FALSE);
+  if (!empty($sync_data)) {
+    $postphoned_submission_syncs = variable_get('spwebformsync_postphoned_submission_syncs', array());
+    foreach ($sync_data as $webform_id => $data) {
+      if (!empty($postphoned_submission_syncs[$webform_id])) {
+        foreach ($postphoned_submission_syncs[$webform_id] as $key => $submission_id) {
+          $submission = webform_get_submission($webform_id, $submission_id);
+          if (!empty($submission)) {
+            // Break out of loop when max number of syncs is reached.
+            if ($synced >= $max_cron_number) {
+              break 2;
+            }
+            spwebformsync_process_submission($submission);
+            $synced ++;
+            unset($postphoned_submission_syncs[$webform_id][$key]);
+          }
+        }
+      }
+    }
+    variable_set('spwebformsync_postphoned_submission_syncs', $postphoned_submission_syncs);
+  }
+}

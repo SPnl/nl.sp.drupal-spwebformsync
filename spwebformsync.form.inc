@@ -5,7 +5,7 @@
  * ---------------------------------------------------------------------------
  */
 
-function spcontactform_get_webforms() {
+function spwebformsync_get_webforms() {
   $webforms = &drupal_static(__FUNCTION__);
   if (!isset($webforms)) {
     $webforms = array();
@@ -22,7 +22,7 @@ function spcontactform_get_webforms() {
     }
   }
   // Filter already set forms.
-  $sync_data = variable_get('spcontactform_sync_data', array());
+  $sync_data = variable_get('spwebformsync_sync_data', array());
   foreach ($webforms as $key => $webform) {
     if (in_array($webform->nid, array_keys($sync_data))) {
       unset($webforms[$key]);
@@ -31,7 +31,7 @@ function spcontactform_get_webforms() {
   return $webforms;
 }
 
-function spcontactform_get_webform_allowed_components($nid, $allowed_types) {
+function spwebformsync_get_webform_allowed_components($nid, $allowed_types) {
   if (!empty($nid)) {
     $webform = node_load($nid);
 
@@ -49,12 +49,12 @@ function spcontactform_get_webform_allowed_components($nid, $allowed_types) {
   return FALSE;
 }
 
-function spcontactform_get_civi_groups($sync = TRUE) {
+function spwebformsync_get_civi_groups($sync = TRUE) {
   if ($sync) {
     $groups = &drupal_static(__FUNCTION__);
     if (!isset($groups)) {
 
-      if ($cache = cache_get('spcontactform_civi_groups')) {
+      if ($cache = cache_get('spwebformsync_civi_groups')) {
         $groups = $cache->data;
       }
       else {
@@ -77,28 +77,28 @@ function spcontactform_get_civi_groups($sync = TRUE) {
               }
             }
             asort($groups);
-            variable_set('spcontactform_civi_groups', $groups);
+            variable_set('spwebformsync_civi_groups', $groups);
           }
           else {
             drupal_set_message('Error syncing civicrm groups, using saved data.', 'warning');
           }
         }
       } 
-      $groups = variable_get('spcontactform_civi_groups', array());
-      cache_set('spcontactform_civi_groups', $groups, 'cache', time() + 3600);
+      $groups = variable_get('spwebformsync_civi_groups', array());
+      cache_set('spwebformsync_civi_groups', $groups, 'cache', time() + 3600);
     }
     return $groups;
   }
-  $groups = variable_get('spcontactform_civi_groups', array());
+  $groups = variable_get('spwebformsync_civi_groups', array());
   return $groups;
 }
 
-function spcontactform_get_civi_tags($sync = TRUE) {
+function spwebformsync_get_civi_tags($sync = TRUE) {
   if ($sync) {
     $tags = &drupal_static(__FUNCTION__);
     if (!isset($tags)) {
 
-      if ($cache = cache_get('spcontactform_civi_tags')) {
+      if ($cache = cache_get('spwebformsync_civi_tags')) {
         $tags = $cache->data;
       }
       else {
@@ -118,23 +118,23 @@ function spcontactform_get_civi_tags($sync = TRUE) {
               $tags[$value['id']] = $value['name'];
             }
             asort($tags);
-            variable_set('spcontactform_civi_tags', $tags);
+            variable_set('spwebformsync_civi_tags', $tags);
           }
           else {
             drupal_set_message('Error syncing civicrm tags, using saved data.', 'warning');
           }
         }
       } 
-      $tags = variable_get('spcontactform_civi_tags', array());
-      cache_set('spcontactform_civi_tags', $tags, 'cache', time() + 3600);
+      $tags = variable_get('spwebformsync_civi_tags', array());
+      cache_set('spwebformsync_civi_tags', $tags, 'cache', time() + 3600);
     }
     return $tags;
   }
-  $tags = variable_get('spcontactform_civi_tags', array());
+  $tags = variable_get('spwebformsync_civi_tags', array());
   return $tags;
 }
 
-function spcontactform_parse_webform_select_options($webform, $selected_component) {
+function spwebformsync_parse_webform_select_options($webform, $selected_component) {
   $options = array();
   if (!empty($webform->webform['components'][$selected_component]['extra']['items'])) {
     $items = $webform->webform['components'][$selected_component]['extra']['items'];

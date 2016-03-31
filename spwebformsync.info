@@ -1,4 +1,4 @@
-name = SP Contact Form
+name = SP Webform Sync
 description =  Syncs selected webform components with selected remote CiviCRM contact fields and adds that contact to a preselected CiviCRM group.
 core = 7.x
 package = sprbs
@@ -6,4 +6,4 @@ dependencies[] = sprbs
 dependencies[] = webform
 dependencies[] = spciviapi
 
-stylesheets[all][] = css/spcontactform.css
+stylesheets[all][] = css/spwebformsync.css
