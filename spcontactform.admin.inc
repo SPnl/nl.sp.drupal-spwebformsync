@@ -14,24 +14,31 @@ function spcontactform_admin_form($form, &$form_state) {
 
   // Get data.
   $webforms = spcontactform_get_webforms();
-  foreach ($webforms as $webform) {
-    $webform_select_options[$webform->nid] = $webform->title;
+  if (!empty($webforms)) {
+    foreach ($webforms as $webform) {
+      $webform_select_options[$webform->nid] = $webform->title;
+    }
+
+    // Set default value.
+    $webform_default = isset($form_state['values']['webform']) ? $form_state['values']['webform'] : key($webform_select_options);
+
+    // Create form element.
+    $form['webform'] = array(
+      '#type' => 'select',
+      '#title' => 'Kies het webformulier',
+      '#options' => $webform_select_options,
+      '#empty_option' => 'Kies:',
+      '#ajax' => array(
+        'wrapper' => 'spcontactform_ajax_form',
+        'callback' => 'spcontactform_ajax_form_callback',
+      ),
+    );
   }
-
-  // Set default value.
-  $webform_default = isset($form_state['values']['webform']) ? $form_state['values']['webform'] : key($webform_select_options);
-
-  // Create form element.
-  $form['webform'] = array(
-    '#type' => 'select',
-    '#title' => 'Kies het formulier',
-    '#options' => $webform_select_options,
-    '#empty_option' => 'Kies:',
-    '#ajax' => array(
-      'wrapper' => 'spcontactform_ajax_form',
-      'callback' => 'spcontactform_ajax_form_callback',
-    ),
-  );
+  else {
+    $form['no_webforms'] = array(
+      '#markup' => 'Er is geen webformulier beschikbaar (<a href="/node/webform/add">voeg toe</a>).',
+    );
+  }
 
   if (isset($form_state['values']['webform'])) {
     // Set default value.
@@ -371,42 +378,47 @@ function spcontactform_group_autocomplete($string) {
 
 function spcontactform_overview() {
   $sync_data = variable_get('spcontactform_sync_data', array());
-  $postphoned_submission_syncs = variable_get('spcontactform_postphoned_submission_syncs', array());
-  $data_names = spcontactform_get_data_names();
-  $markup = '<table><tr><th>Webformulier</th><th>Formulier veld &#8594; Civi data</th><th>Civi groepen</th><th>Hou hoog</th><th>Cron wachtrij</th><th></th></tr>';
-  foreach ($sync_data as $data) {
-    $form = node_load($data['webform']);
-    // If form doesn't exist, clear sync data for this form.
-    if ($form === FALSE) {
-      unset($sync_data[$data['webform']]);
-      variable_set('spcontactform_sync_data', $sync_data);
-      continue;
-    }
-    $markup .= '<tr><td><a href="/node/'. $form->nid . '">'.$form->title.'</a></td><td><table>';
-    foreach ($data_names as $key => $name) {
-      if (!empty($data[$key . '_component'])) {
-        $markup .= '<tr><td>' . $form->webform['components'][$data[$key . '_component']]['name'] . '</td><td>&nbsp;&#8594;&nbsp;</td><td>' . $name . '</td></tr>';
+  if (!empty($sync_data)) {
+    $postphoned_submission_syncs = variable_get('spcontactform_postphoned_submission_syncs', array());
+    $data_names = spcontactform_get_data_names();
+    $markup = '<table><tr><th>Webformulier</th><th>Formulier veld &#8594; Civi data</th><th>Civi groepen</th><th>Hou hoog</th><th>Cron wachtrij</th><th></th></tr>';
+    foreach ($sync_data as $data) {
+      $form = node_load($data['webform']);
+      // If form doesn't exist, clear sync data for this form.
+      if ($form === FALSE) {
+        unset($sync_data[$data['webform']]);
+        variable_set('spcontactform_sync_data', $sync_data);
+        continue;
       }
-    }
-    $markup .= '</table></td><td>';
-    if (isset($data['selected_groups'])) {
-      foreach ($data['selected_groups'] as $groupname) {
-        $markup .= $groupname . '<br/>';
+      $markup .= '<tr><td><a href="/node/'. $form->nid . '">'.$form->title.'</a></td><td><table>';
+      foreach ($data_names as $key => $name) {
+        if (!empty($data[$key . '_component'])) {
+          $markup .= '<tr><td>' . $form->webform['components'][$data[$key . '_component']]['name'] . '</td><td>&nbsp;&#8594;&nbsp;</td><td>' . $name . '</td></tr>';
+        }
       }
+      $markup .= '</table></td><td>';
+      if (isset($data['selected_groups'])) {
+        foreach ($data['selected_groups'] as $groupname) {
+          $markup .= $groupname . '<br/>';
+        }
+      }
+      else {
+        $markup .= 'Geen';
+      }
+      if (!empty($data['hou_hoog_component'])) {
+        $markup .= '</td><td><table><tr><td>Veld:&nbsp;</td><td>' . $form->webform['components'][$data['hou_hoog_component']]['name'] . '</td></tr><tr><td>Conditie:&nbsp;</td><td>' . $data['hou_hoog_accept_value'] . '</td></tr></table></td>';
+      }
+      else {
+        $markup .= '</td><td>Geen</td>';
+      }
+      $markup .= '<td>' . count($postphoned_submission_syncs[$form->nid]) . '</td>';
+      $markup .= '<td><a href="/admin/config/sp/spcontactform/delete/' . $form->nid . '">verwijder</a></td></tr>';
     }
-    else {
-      $markup .= 'Geen';
-    }
-    if (!empty($data['hou_hoog_component'])) {
-      $markup .= '</td><td><table><tr><td>Veld:&nbsp;</td><td>' . $form->webform['components'][$data['hou_hoog_component']]['name'] . '</td></tr><tr><td>Conditie:&nbsp;</td><td>' . $data['hou_hoog_accept_value'] . '</td></tr></table></td>';
-    }
-    else {
-      $markup .= '</td><td>Geen</td>';
-    }
-    $markup .= '<td>' . count($postphoned_submission_syncs[$form->nid]) . '</td>';
-    $markup .= '<td><a href="/admin/config/sp/spcontactform/delete/' . $form->nid . '">verwijder</a></td></tr>';
+    $markup .= '</table>';
   }
-  $markup .= '</table>';
+  else {
+    $markup = 'Er zijn nog geen SP <a href="/admin/config/sp/spcontactform/add">contactformulieren</a> toegevoegd.';
+  }
 
   return $markup;
 }
