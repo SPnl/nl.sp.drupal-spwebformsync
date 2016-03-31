@@ -8,12 +8,13 @@
 function spwebformsync_get_webforms() {
   $webforms = &drupal_static(__FUNCTION__);
   if (!isset($webforms)) {
+    $webform_node_types = webform_variable_get('webform_node_types');
     $webforms = array();
     $query = new EntityFieldQuery();
 
     $result = $query
       ->entityCondition('entity_type', 'node')
-      ->entityCondition('bundle', 'webform')
+      ->entityCondition('bundle', $webform_node_types, 'IN')
       ->execute();
 
     if (!empty($result['node'])) {
