@@ -356,8 +356,9 @@ function spcontactform_group_autocomplete($string) {
 
 function spcontactform_overview() {
   $sync_data = variable_get('spcontactform_sync_data', array());
+  $postphoned_submission_syncs = variable_get('spcontactform_postphoned_submission_syncs', array());
   $data_names = spcontactform_get_data_names();
-  $markup = '<table><tr><th>Webformulier</th><th>Formulier veld &#8594; Civi data</th><th>Civi groepen</th><th>Hou hoog</th><th></th></tr>';
+  $markup = '<table><tr><th>Webformulier</th><th>Formulier veld &#8594; Civi data</th><th>Civi groepen</th><th>Hou hoog</th><th>Cron wachtrij</th><th></th></tr>';
   foreach ($sync_data as $data) {
     $form = node_load($data['webform']);
     // If form doesn't exist, clear sync data for this form.
@@ -387,16 +388,22 @@ function spcontactform_overview() {
     else {
       $markup .= '</td><td>Geen</td>';
     }
+    $markup .= '<td>' . count($postphoned_submission_syncs[$form->nid]) . '</td>';
     $markup .= '<td><a href="/admin/config/sp/spcontactform/delete/' . $form->nid . '">verwijder</a></td></tr>';
   }
   $markup .= '</table>';
-  $markup .= '<pre>' . print_r($sync_data, TRUE) . '</pre>';
 
   return $markup;
 }
 
 function spcontactform_delete($id) {
   $sync_data = variable_get('spcontactform_sync_data', array());
+  $postphoned_submission_syncs = variable_get('spcontactform_postphoned_submission_syncs', array());
+  if (!empty($postphoned_submission_syncs[$id])) {
+    unset($postphoned_submission_syncs[$id]);
+    variable_set('spcontactform_postphoned_submission_syncs', $postphoned_submission_syncs);
+    drupal_set_message('Cron wachtrij contactform nr. ' . $id . ' is verwijderd.');
+  }
   if (isset($sync_data[$id])) {
     unset($sync_data[$id]);
     variable_set('spcontactform_sync_data', $sync_data);
