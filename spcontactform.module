@@ -18,7 +18,7 @@ function spcontactform_menu() {
 
   $items['admin/config/sp/spcontactform'] = array(
     'title' => 'SP Contactform',
-    'type' => MENU_CALLBACK,
+    'type' => MENU_NORMAL_ITEM,
     'page callback' => 'spcontactform_overview',
     'file' => 'spcontactform.admin.inc',
     'access callback' => sprbs_access_check(),

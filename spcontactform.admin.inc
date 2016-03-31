@@ -79,7 +79,7 @@ function spcontactform_admin_form($form, &$form_state) {
 
       $form['group_select'] = array(
         '#type' => 'fieldset',
-        '#title' => 'Selecteer groep(en) waar contact aan moet worden toegevoegd',
+        '#title' => 'Selecteer groep(en) waar het contact aan moet worden toegevoegd',
       );
       // Store selected group.
       if (!empty($form_state['values']['groups'])) {
@@ -95,7 +95,7 @@ function spcontactform_admin_form($form, &$form_state) {
       // Show message.
       $form['group_select']['message_cache'] = array(
         '#type' => 'markup',
-        '#markup' => '<p>Leeg de Drupal cache als een CiviCRM groep niet te vinden is.</p>',
+        '#markup' => '<p><strong>Leeg de Drupal cache als een CiviCRM groep niet te vinden is!</strong></p>',
       );
       // Show stored groups.
       if (!empty($form_state['storage']['selected_groups'])) {
@@ -274,7 +274,11 @@ function spcontactform_settings_form($form, &$form_state) {
   if (empty(variable_get('spcontactform_sync_type', FALSE))) {
     variable_set('spcontactform_sync_type', 'cron');
   }
-  $form['spcontactform_sync_type'] = array(
+  $form['spcontactform_sync_settings'] = array(
+    '#type' => 'fieldset',
+    '#title' => 'Cron instellingen',
+  );
+  $form['spcontactform_sync_settings']['spcontactform_sync_type'] = array(
     '#type' => 'radios',
     '#title' => 'Hoe wilt u contacten synchronizeren?',
     '#default_value' => variable_get('spcontactform_sync_type', array()),
@@ -283,7 +287,7 @@ function spcontactform_settings_form($form, &$form_state) {
   );
 
   // Max sync items per cron.
-  $form['spcontactform_cron_number'] = array(
+  $form['spcontactform_sync_settings']['spcontactform_cron_number'] = array(
     '#type' => 'select',
     '#title' => 'Hoeveel webformulier inzendingen moeten per cron gesynchronizeerd worden?',
     '#default_value' => variable_get('spcontactform_cron_number', 0),
@@ -295,6 +299,11 @@ function spcontactform_settings_form($form, &$form_state) {
     ),
   );
 
+  // Webform settings.
+  $form['spcontactform_webform_settings'] = array(
+    '#type' => 'fieldset',
+    '#title' => 'Webformulier instellingen',
+  );
   // Get webform component options.
   $component_types = module_invoke_all('webform_component_info');
   $options = array();
@@ -307,14 +316,20 @@ function spcontactform_settings_form($form, &$form_state) {
     drupal_set_message('Er is geen webformulier veldtype gevonden.', 'error');
   }
   // Select webform component types form.
-  $form['spcontactform_allowed_component_types'] = array(
+  $form['spcontactform_webform_settings']['spcontactform_allowed_component_types'] = array(
     '#type' => 'checkboxes',
     '#title' => 'Kies webformulier veld types om te synchronizeren.',
     '#options' => $options,
     '#default_value' => variable_get('spcontactform_allowed_component_types', array()),
   );
+
+  // Civicrm settings.
+  $form['spcontactform_civicrm_settings'] = array(
+    '#type' => 'fieldset',
+    '#title' => 'CiviCRM synchronizatie instellingen',
+  );
   $groups = spcontactform_get_civi_groups();
-  $form['spcontactform_hou_hoog_group'] = array(
+  $form['spcontactform_civicrm_settings']['spcontactform_hou_hoog_group'] = array(
     '#type' => 'select',
     '#title' => 'Kies de groep van mensen die op de hoogte willen blijven van belangrijk SP nieuws.',
     '#options' => $groups,
@@ -325,7 +340,7 @@ function spcontactform_settings_form($form, &$form_state) {
   if (empty(variable_get('spcontactform_unverified_tag', FALSE)) && $id = array_search('Ongecontroleerd', $tags)) {
     variable_set('spcontactform_unverified_tag', $id);
   }
-  $form['spcontactform_unverified_tag'] = array(
+  $form['spcontactform_civicrm_settings']['spcontactform_unverified_tag'] = array(
     '#type' => 'select',
     '#title' => 'Kies de tag die moet worden toegevoegd aan contacten die handmatig moeten worden gecontroleerd.',
     '#options' => $tags,
