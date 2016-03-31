@@ -111,7 +111,7 @@ function spwebformsync_webform_submission_insert($node, $submission) {
  */
 function spwebformsync_cron() {
   $synced = 0;
-  $max_cron_number = variable_get('spwebformsync_cron_number', 0);
+  $max_cron_number = 10 * variable_get('spwebformsync_cron_number', 0);
   $sync_data = variable_get('spwebformsync_sync_data', FALSE);
   if (!empty($sync_data)) {
     $postphoned_submission_syncs = variable_get('spwebformsync_postphoned_submission_syncs', array());
