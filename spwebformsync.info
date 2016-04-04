@@ -4,6 +4,7 @@ core = 7.x
 package = sprbs
 dependencies[] = sprbs
 dependencies[] = webform
+dependencies[] = webform_confirm_email
 dependencies[] = spciviapi
 
 stylesheets[all][] = css/spwebformsync.css

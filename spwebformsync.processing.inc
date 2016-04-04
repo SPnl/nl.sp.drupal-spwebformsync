@@ -37,6 +37,16 @@ function spwebformsync_parse_submission($submission, $sync_data) {
       }
     }
   }
+  // If possible, split house number in house_number and addition.
+  if (!empty($data['house_number'])) {
+    $split_house_number = spwebformsync_split_house_number($data['house_number']);
+    if (!empty($split_house_number[2])) {
+      $data['house_number'] = $split_house_number[1];
+      if (empty($data['house_number_addition'])) {
+        $data['house_number_addition'] = $split_house_number[2];
+      }
+    }
+  }
   // If name item, then if possible, set first name, middle_name, and last name.
   if (!empty($data['name'])) {
     // Check if name contains prepositon.
@@ -233,7 +243,7 @@ function spwebformsync_add_contact($data, $sync_data) {
       'street_and_number' => 'street_address',
       'street' => 'street_name',
       'house_number' => 'street_number',
-      'house_number_addition' => 'street_number_suffix',
+      'house_number_addition' => 'street_unit',
       'postal_code' => 'postal_code',
       'locality' => 'city',
     );
@@ -347,7 +357,7 @@ function spwebformsync_merge_contacts($data, $sync_data, $same_contacts) {
         // Check if phone is already set.
         $params = array(
           'contact_id' => $contact_id,
-          'phone' => $data['telephone']
+          'phone_numeric' => $data['telephone']
         );
         $get_phone_result = $spcivi->api('Phone', 'getsingle', $params);
         if (!empty($get_phone_result) && empty($get_phone_result['id'])) {
@@ -378,65 +388,62 @@ function spwebformsync_merge_contacts($data, $sync_data, $same_contacts) {
         }
       }
 
-      // Merge address data if no address with same house number exists.
-      if (!empty($data['house_number']) || !empty($data['postal_code'])) {
+      // Merge address data if no address with same house number or postal code exists.
+      if (!empty($data['house_number'])) {
         // Check if address with same house number exists.
         $params = array(
           'contact_id' => $contact_id,
           'street_number' => $data['house_number'],
         );
         $get_street_number_address_result = $spcivi->api('Address', 'getsingle', $params);
+      }
+      if (!empty($data['postal_code'])) {
         $params = array(
           'contact_id' => $contact_id,
           'postal_code' => $data['postal_code'],
         );
         $get_postal_code_address_result = $spcivi->api('Address', 'getsingle', $params);
-        if (
-          (
-            !empty($get_street_number_address_result) &&
-            empty($get_street_number_address_result['id'])
-          ) &&
-          (
-            !empty($get_postal_code_address_result) &&
-            empty($get_postal_code_address_result['id'])
-          )
-        ) {
-          // Add extra address.
-          if (empty($contact['address_id'])) {
-            $primary = 1;
-            $location_type_id = 3;
-          }
-          else {
-            $primary = 0;
-            $location_type_id = 4;
-          }
-          $autosync = array(
-            'street_and_number' => 'street_address',
-            'street' => 'street_name',
-            'house_number' => 'street_number',
-            'house_number_addition' => 'street_number_suffix',
-            'postal_code' => 'postal_code',
-            'locality' => 'city',
-          );
-          $params = array(
-            'contact_id' => $contact_id,
-            'location_type_id' => $location_type_id,
-            'is_primary' => $primary,
-            'country_id' => 1152,
-          );
-          $address_data_found = FALSE;
-          foreach ($autosync as $key => $civikey) {
-            if (!empty($data[$key])) {
-              $params[$civikey] = $data[$key];
-              $address_data_found = TRUE;
-            }
-          }
-          if ($address_data_found) {
-            $create_address_results = $spcivi->api('Address', 'create', $params);
-            _spcf_check_result($create_address_results, 'adressen', 'create');
+      }
+      if (
+          empty($get_street_number_address_result['id']) &&
+          empty($get_postal_code_address_result['id'])
+      ) {
+        // Add extra address.
+        if (empty($contact['address_id'])) {
+          $primary = 1;
+          $location_type_id = 3;
+        }
+        else {
+          $primary = 0;
+          $location_type_id = 4;
+        }
+        $autosync = array(
+          'street_and_number' => 'street_address',
+          'street' => 'street_name',
+          'house_number' => 'street_number',
+          'house_number_addition' => 'street_unit',
+          'postal_code' => 'postal_code',
+          'locality' => 'city',
+        );
+        $params = array(
+          'contact_id' => $contact_id,
+          'location_type_id' => $location_type_id,
+          'is_primary' => $primary,
+          'country_id' => 1152,
+        );
+        $address_data_found = FALSE;
+        foreach ($autosync as $key => $civikey) {
+          if (!empty($data[$key])) {
+            $params[$civikey] = $data[$key];
+            $address_data_found = TRUE;
           }
         }
+        if ($address_data_found) {
+          $create_address_results = $spcivi->api('Address', 'create', $params);
+          _spcf_check_result($create_address_results, 'adressen', 'create');
+        }
       }
+      return $contact_id;
     }
   }
 }
@@ -470,6 +477,15 @@ function spwebformsync_contact_add_groups($submission, $sync_data, $contact) {
   }
 }
 
+function spwebformsync_split_house_number($house_number) {
+  $house_number = trim($house_number);
+  $regex = "@^([0-9]+) *(.*)$@";
+  if (preg_match($regex, $house_number, $matches)) {
+    return $matches;
+  }
+  return FALSE;
+}
+
 function spwebformsync_split_name($name) {
   $name = trim($name);
   // If name contains only lowercase words, make all first characters uppercase.
@@ -478,7 +494,10 @@ function spwebformsync_split_name($name) {
     $name = ucwords($name);
   }
   // Split name on middle_name.
-  $regex = "@^((?'first_name'(\b[A-ZÀÈÌÒÙÁÉÍÓÚÝÂÊÎÔÛÃÑÕÄËÏÖÜŸÇÅ][a-zàèìòùáéíóúýâêîôûãñõäëïöü¡¿çãñõ'-]+\b\s*)+)\s)?(?'middle_name'(\b[a-zàèìòùáéíóúýâêîôûãñõäëïöü¡¿çãñõ]+\b\s*)+)\s+(?'last_name'(\b[A-ZÀÈÌÒÙÁÉÍÓÚÝÂÊÎÔÛÃÑÕÄËÏÖÜŸÇÅ][a-zàèìòùáéíóúýâêîôûãñõäëïöü¡¿çãñõ'-]+\b).*)$@";
+  $middle_names_array = spwebformsync_middle_names(); 
+  $middle_names_regex = implode('|', $middle_names_array);
+
+  $regex = "@^((?'first_name'(\b[A-ZÀÈÌÒÙÁÉÍÓÚÝÂÊÎÔÛÃÑÕÄËÏÖÜŸÇÅ][a-zàèìòùáéíóúýâêîôûãñõäëïöü¡¿çãñõ'-]+\b\s*)+?)\s)(?'middle_name'(\b(" . $middle_names_regex . ")\b\s*)+)\s+(?'last_name'(\b[A-ZÀÈÌÒÙÁÉÍÓÚÝÂÊÎÔÛÃÑÕÄËÏÖÜŸÇÅ][a-zàèìòùáéíóúýâêîôûãñõäëïöü¡¿çãñõ'-]+\b).*)$@";
   if (preg_match($regex, $name, $matches)) {
     return $matches;
   }
@@ -502,4 +521,12 @@ function _spcf_check_result($result, $dataname, $action) {
     return FALSE;
   }
   return TRUE;
+}
+
+function spwebformsync_check_submission_confirmed($sid) {
+  $result = db_query("SELECT confirmed FROM {webform_submissions} WHERE sid = :sid", array('sid' => $sid));
+  if (!empty($result->fetchField(0))) {
+    return TRUE;
+  }
+  return FALSE;
 }

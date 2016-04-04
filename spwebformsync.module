@@ -90,17 +90,18 @@ function spwebformsync_node_delete($node) {
  */
 function spwebformsync_webform_submission_insert($node, $submission) {
   $sync_data = variable_get('spwebformsync_sync_data', FALSE);
-  if (!empty($sync_data) && isset($sync_data[$node->nid])) {
-    $sync_type = variable_get('spwebformsync_sync_type'); 
-    switch ($sync_type) {
-    case 'direct':
+  $sync_type = variable_get('spwebformsync_sync_type'); 
+  if ($sync_type === 'direct') {
+    // Directly sync without check if confirmed.
+    if (!empty($sync_data) && isset($sync_data[$node->nid])) {
       spwebformsync_process_submission($submission);
-      break;
-    case 'cron':
-      $postphoned_submission_syncs = variable_get('spwebformsync_postphoned_submission_syncs', array());
-      $postphoned_submission_syncs[$node->nid][$submission->sid] = $submission->sid;
-      variable_set('spwebformsync_postphoned_submission_syncs', $postphoned_submission_syncs);
     }
+  }
+  else {
+    // Postphone sync until cron.
+    $postphoned_submission_syncs = variable_get('spwebformsync_postphoned_submission_syncs', array());
+    $postphoned_submission_syncs[$node->nid][$submission->sid] = $submission->sid;
+    variable_set('spwebformsync_postphoned_submission_syncs', $postphoned_submission_syncs);
   }
 }
 
@@ -119,14 +120,17 @@ function spwebformsync_cron() {
       if (!empty($postphoned_submission_syncs[$webform_id])) {
         foreach ($postphoned_submission_syncs[$webform_id] as $key => $submission_id) {
           $submission = webform_get_submission($webform_id, $submission_id);
-          if (!empty($submission)) {
-            // Break out of loop when max number of syncs is reached.
-            if ($synced >= $max_cron_number) {
-              break 2;
+          // Check if submission is confirmed.
+          if (spwebformsync_check_submission_confirmed($submission_id)) {
+            if (!empty($submission)) {
+              // Break out of loop when max number of syncs is reached.
+              if ($synced >= $max_cron_number) {
+                break 2;
+              }
+              spwebformsync_process_submission($submission);
+              $synced ++;
+              unset($postphoned_submission_syncs[$webform_id][$key]);
             }
-            spwebformsync_process_submission($submission);
-            $synced ++;
-            unset($postphoned_submission_syncs[$webform_id][$key]);
           }
         }
       }
