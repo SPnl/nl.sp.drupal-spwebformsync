@@ -121,7 +121,9 @@ function spwebformsync_cron() {
         foreach ($postphoned_submission_syncs[$webform_id] as $key => $submission_id) {
           $submission = webform_get_submission($webform_id, $submission_id);
           // Check if submission is confirmed.
-          if (spwebformsync_check_submission_confirmed($submission_id)) {
+          $do_not_check_confirmation = variable_get('spwebformsync_do_not_check_confirmation', 0);
+          $confirmed = spwebformsync_check_submission_confirmed($submission_id);
+          if ((!$do_not_check_confirmation && $confirmed) || $do_not_check_confirmation) {
             if (!empty($submission)) {
               // Break out of loop when max number of syncs is reached.
               if ($synced >= $max_cron_number) {

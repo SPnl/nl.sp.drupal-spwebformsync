@@ -289,7 +289,7 @@ function spwebformsync_settings_form($form, &$form_state) {
     '#type' => 'radios',
     '#title' => 'Hoe wilt u contacten synchronizeren?',
     '#default_value' => variable_get('spwebformsync_sync_type', array()),
-    '#options' => array('cron' => 'Cron', 'direct' => 'Direct'),
+    '#options' => array('direct' => 'Direct (geen controle bevestiging inzending!)', 'cron' => 'Cron'),
     '#required' => TRUE,
   );
 
@@ -299,6 +299,18 @@ function spwebformsync_settings_form($form, &$form_state) {
     '#title' => 'Hoeveel webformulier inzendingen moeten per cron gesynchronizeerd worden?',
     '#default_value' => variable_get('spwebformsync_cron_number', 0),
     '#options' => range(0, 500, 10),
+    '#states' => array(
+      'visible' => array(
+        ':input[name="spwebformsync_sync_type"]' => array('value' => 'cron'),
+      ),
+    ),
+  );
+
+  // Check confirmation.
+  $form['spwebformsync_sync_settings']['spwebformsync_do_not_check_confirmation'] = array(
+    '#type' => 'checkbox',
+    '#title' => 'Sla de bevestiginscontrole voor inzendingen over',
+    '#default_value' => variable_get('spwebformsync_do_not_check_confirmation', 0),
     '#states' => array(
       'visible' => array(
         ':input[name="spwebformsync_sync_type"]' => array('value' => 'cron'),

@@ -20,5 +20,6 @@ function spwebformsync_uninstall() {
   variable_del('spwebformsync_sync_type');
   variable_del('spwebformsync_cron_number');
   variable_del('spwebformsync_postphoned_submission_syncs');
+  variable_del('spwebformsync_do_not_check_confirmation');
 }
 
