@@ -51,7 +51,7 @@ function spwebformsync_valid_email($email) {
 
 function spwebformsync_valid_telephone($telephone) {
   if (!empty($telephone)) {
-    preg_replace('@[^0-9]@', '', $telephone);
+    $telephone = preg_replace('@[^0-9]@', '', $telephone);
     // +31612345678 => 0649492174
     if (
       strlen($telephone) === 11 &&
