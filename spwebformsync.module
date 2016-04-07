@@ -7,6 +7,7 @@ function spwebformsync_init() {
   module_load_include("inc", "spwebformsync", "spwebformsync.form");
   module_load_include("inc", "spwebformsync", "spwebformsync.processing");
   module_load_include("inc", "spwebformsync", "spwebformsync.settings");
+  module_load_include("inc", "spwebformsync", "components/spwebformsync.components");
   module_load_include('inc', 'webform', 'includes/webform.submissions');
 }   
 
@@ -138,5 +139,14 @@ function spwebformsync_cron() {
       }
     }
     variable_set('spwebformsync_postphoned_submission_syncs', $postphoned_submission_syncs);
+  }
+}
+
+function spwebformsync_webform_submission_delete($node, $submission) {
+  $postphoned_submission_syncs = variable_get('spwebformsync_postphoned_submission_syncs', FALSE); 
+  if (!empty($postphoned_submission_syncs[$submission->nid][$submission->sid])) {
+    unset($postphoned_submission_syncs[$submission->nid][$submission->sid]);
+    variable_set('spwebformsync_postphoned_submission_syncs', $postphoned_submission_syncs);
+    drupal_set_message('Uitgestelde webformulier synchronizatie nr. ' . $submission->sid . ' is verwijderd.');
   }
 }
