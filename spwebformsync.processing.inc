@@ -497,17 +497,17 @@ function spwebformsync_split_name($name) {
   $middle_names_array = spwebformsync_middle_names(); 
   $middle_names_regex = implode('|', $middle_names_array);
 
-  $regex = "@^((?'first_name'(\b[A-ZÀÈÌÒÙÁÉÍÓÚÝÂÊÎÔÛÃÑÕÄËÏÖÜŸÇÅ][a-zàèìòùáéíóúýâêîôûãñõäëïöü¡¿çãñõ'-.]+\b\s*)+?)\s)(?'middle_name'(\b(" . $middle_names_regex . ")\b\s*)+)\s+(?'last_name'(\b[A-ZÀÈÌÒÙÁÉÍÓÚÝÂÊÎÔÛÃÑÕÄËÏÖÜŸÇÅ][a-zàèìòùáéíóúýâêîôûãñõäëïöü¡¿çãñõ'-]+\b).*)$@";
+  $regex = "@^((?'first_name'(\b([A-ZÀÈÌÒÙÁÉÍÓÚÝÂÊÎÔÛÃÑÕÄËÏÖÜŸÇÅ.]+|[A-ZÀÈÌÒÙÁÉÍÓÚÝÂÊÎÔÛÃÑÕÄËÏÖÜŸÇÅ][a-zàèìòùáéíóúýâêîôûãñõäëïöü¡¿çãñõ'\-]+)\s*)+?)\s)(?'middle_name'(\b(" . $middle_names_regex . ")\b\s*)+)\s+(?'last_name'(\b[A-ZÀÈÌÒÙÁÉÍÓÚÝÂÊÎÔÛÃÑÕÄËÏÖÜŸÇÅ][a-zàèìòùáéíóúýâêîôûãñõäëïöü¡¿çãñõ'-]+\b).*)$@";
   if (preg_match($regex, $name, $matches)) {
     return $matches;
   }
   // Split name without middle_name in first name and last name(s).
-  $regex = "@^(?'first_name'(\b[A-ZÀÈÌÒÙÁÉÍÓÚÝÂÊÎÔÛÃÑÕÄËÏÖÜŸÇÅ][a-zàèìòùáéíóúýâêîôûãñõäëïöü¡¿çãñõ'-]+\b))\s+(?'last_name'(\b[A-ZÀÈÌÒÙÁÉÍÓÚÝÂÊÎÔÛÃÑÕÄËÏÖÜŸÇÅ][a-zàèìòùáéíóúýâêîôûãñõäëïöü¡¿çãñõ'-]+\b\s*)+)$@";
+  $regex = "@^(?'first_name'(\b([A-ZÀÈÌÒÙÁÉÍÓÚÝÂÊÎÔÛÃÑÕÄËÏÖÜŸÇÅ.]+|[A-ZÀÈÌÒÙÁÉÍÓÚÝÂÊÎÔÛÃÑÕÄËÏÖÜŸÇÅ][a-zàèìòùáéíóúýâêîôûãñõäëïöü¡¿çãñõ'\-]+)))\s+(?'last_name'(\b[A-ZÀÈÌÒÙÁÉÍÓÚÝÂÊÎÔÛÃÑÕÄËÏÖÜŸÇÅ][a-zàèìòùáéíóúýâêîôûãñõäëïöü¡¿çãñõ'-]+\b\s*)+)$@";
   if (preg_match($regex, $name, $matches)) {
     return $matches;
   }
   // Check if only first name.
-  $regex = "@^(?'first_name'(\b[A-ZÀÈÌÒÙÁÉÍÓÚÝÂÊÎÔÛÃÑÕÄËÏÖÜŸÇÅ][a-zàèìòùáéíóúýâêîôûãñõäëïöü¡¿çãñõ'-]+\b))$@";
+  $regex = "@^(?'first_name'(\b[A-ZÀÈÌÒÙÁÉÍÓÚÝÂÊÎÔÛÃÑÕÄËÏÖÜŸÇÅ.]+|[A-ZÀÈÌÒÙÁÉÍÓÚÝÂÊÎÔÛÃÑÕÄËÏÖÜŸÇÅ.][a-zàèìòùáéíóúýâêîôûãñõäëïöü¡¿çãñõ'\-]+\b))$@";
   if (preg_match($regex, $name, $matches)) {
     return $matches;
   }
