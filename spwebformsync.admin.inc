@@ -289,19 +289,19 @@ function spwebformsync_settings_form($form, &$form_state) {
     '#type' => 'radios',
     '#title' => 'Hoe wilt u contacten synchronizeren?',
     '#default_value' => variable_get('spwebformsync_sync_type', array()),
-    '#options' => array('direct' => 'Direct (geen controle bevestiging inzending!)', 'cron' => 'Cron'),
+    '#options' => array('direct' => 'Direct (geen controle bevestiging inzending!)', 'cron' => 'Cron', 'manual' => 'Handmatig'),
     '#required' => TRUE,
   );
 
   // Max sync items per cron.
   $form['spwebformsync_sync_settings']['spwebformsync_cron_number'] = array(
     '#type' => 'select',
-    '#title' => 'Hoeveel webformulier inzendingen moeten per cron gesynchronizeerd worden?',
+    '#title' => 'Hoeveel webformulier inzendingen moeten per keer gesynchronizeerd worden?',
     '#default_value' => variable_get('spwebformsync_cron_number', 0),
-    '#options' => range(0, 500, 10),
+    '#options' => range(0, 10, 1),
     '#states' => array(
-      'visible' => array(
-        ':input[name="spwebformsync_sync_type"]' => array('value' => 'cron'),
+      'invisible' => array(
+        ':input[name="spwebformsync_sync_type"]' => array('value' => 'direct'),
       ),
     ),
   );
@@ -312,10 +312,27 @@ function spwebformsync_settings_form($form, &$form_state) {
     '#title' => 'Sla de bevestiginscontrole voor inzendingen over',
     '#default_value' => variable_get('spwebformsync_do_not_check_confirmation', 0),
     '#states' => array(
-      'visible' => array(
-        ':input[name="spwebformsync_sync_type"]' => array('value' => 'cron'),
+      'invisible' => array(
+        ':input[name="spwebformsync_sync_type"]' => array('value' => 'direct'),
       ),
     ),
+  );
+
+  $form['spwebformsync_sync_settings']['spwebformsync_sync_now'] = array(
+    '#type' => 'button',
+    '#value' => 'Nu synchronizeren',
+    '#name' => 'sync_now',
+    '#states' => array(
+      'visible' => array(
+        ':input[name="spwebformsync_sync_type"]' => array('value' => 'manual'),
+      ),
+    ),
+    '#ajax' => array(
+      'wrapper' => 'sync_now',
+      'callback' => 'spwebformsync_form_sync',
+    ),
+    '#prefix' => '<div id="sync_now">',
+    '#suffix' => '</div>',
   );
 
   // Webform settings.
@@ -367,6 +384,18 @@ function spwebformsync_settings_form($form, &$form_state) {
     '#default_value' => variable_get('spwebformsync_unverified_tag', array()),
   );
   return system_settings_form($form);
+}
+
+function spwebformsync_form_sync($form, &$form_state) {
+  $processed = spwebformsync_cron();
+  if (!empty($processed)) {
+    $text = '<p>Inzendingen die gesynced zijn (ids): ' . implode(', ', $processed) . '</p>';
+  }
+  else {
+    $text = '<p>Geen inzendingen gevonden.</p>';
+  }
+  $form['spwebformsync_sync_settings']['spwebformsync_sync_now']['#prefix'] = $text;
+  return $form['spwebformsync_sync_settings']['spwebformsync_sync_now'];
 }
 
 function spwebformsync_group_autocomplete($string) {
