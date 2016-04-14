@@ -67,7 +67,7 @@ function spwebformsync_get_civi_groups($sync = TRUE) {
           'option.limit'          => 9999,
         );
         $groups_results = $spcivi->api('Group', 'get', $params);
-        if (_spcf_check_result($groups_results, 'groepen', 'get')) {
+        if (_spcf_check_result($groups_results, 'groepen', 'get', $params)) {
           if (!empty($groups_results['values'])) {
             foreach ($groups_results['values'] as $value) {
               if (
@@ -113,7 +113,7 @@ function spwebformsync_get_civi_tags($sync = TRUE) {
           'used_for' => 'civicrm_contact',
         );
         $tags_results = $spcivi->api('Tag', 'get', $params);
-        if (_spcf_check_result($tags_results, 'tags', 'get')) {
+        if (_spcf_check_result($tags_results, 'tags', 'get', $params)) {
           if (!empty($tags_results['values'])) {
             foreach ($tags_results['values'] as $value) {
               $tags[$value['id']] = $value['name'];

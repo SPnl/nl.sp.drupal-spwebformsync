@@ -16,6 +16,9 @@ function spwebformsync_process_submission($submission) {
     if (spwebformsync_check_submission_sufficient($data)) {
       // Sync contact.
       $contact = spwebformsync_sync_contact($submission, $data, $sync_data);
+      if (!empty($contact)) {
+        spwebformsync_store_submission_sync_state($submission->nid, $submission->sid, 'synced');
+      }
     }
   }
 }
@@ -95,21 +98,27 @@ function spwebformsync_check_submission_sufficient($data) {
 
 function spwebformsync_sync_contact($submission, $data, $sync_data) {
   // Find similar existing contacts in civi.
-  $same_contacts = spwebformsync_find_same_contacts($data);
-  // Sync contact.
-  if (empty($same_contacts) || count($same_contacts) > 1) {
-    $contact = spwebformsync_add_contact($data, $sync_data);
+  $same_contacts = spwebformsync_find_same_contacts($data, $submission);
+  if ($same_contacts !== FALSE) {
+    // Sync contact.
+    if (empty($same_contacts) || count($same_contacts) > 1) {
+      $contact = spwebformsync_add_contact($data, $sync_data, $submission);
+    }
+    else {
+      $contact = spwebformsync_merge_contacts($data, $sync_data, $same_contacts, $submission);
+    }
+    if (!empty($contact)) {
+      // Add contact to groups.
+      $result = spwebformsync_contact_add_groups($submission, $sync_data, $contact);
+      if (!empty($result)) {
+        return $contact;
+      }
+    }
   }
-  else {
-    $contact = spwebformsync_merge_contacts($data, $sync_data, $same_contacts);
-  }
-  if (!empty($contact)) {
-    // Add contact to groups.
-    spwebformsync_contact_add_groups($submission, $sync_data, $contact);
-  }
+  return FALSE;
 }
 
-function spwebformsync_find_same_contacts($data) {
+function spwebformsync_find_same_contacts($data, $submission) {
   $spcivi = \SPCivi::getInstance();
   $same_contacts = array();
 
@@ -124,12 +133,15 @@ function spwebformsync_find_same_contacts($data) {
     foreach (array($mobile_phone, $mobile_phone_int) as $number_to_check) {
       $params['phone_numeric'] = $number_to_check;
       $mobile_phone_results = $spcivi->api('Phone', 'get', $params);
-      if (_spcf_check_result($mobile_phone_results, 'telefoonnummers', 'get')) {
+      if (_spcf_check_result($mobile_phone_results, 'telefoonnummers', 'get', $params, $submission)) {
         if (!empty($mobile_phone_results['values'])) {
           foreach ($mobile_phone_results['values'] as $value) {
             $same_contacts[$value['contact_id']] = $value['contact_id'];
           }
         }
+      }
+      else {
+        return FALSE;
       }
     }
   }
@@ -145,7 +157,7 @@ function spwebformsync_find_same_contacts($data) {
       'email' => $data['email'],
     );
     $email_results = $spcivi->api('Email', 'get', $params);
-    if (_spcf_check_result($email_results, 'e-mailadressen', 'get')) {
+    if (_spcf_check_result($email_results, 'e-mailadressen', 'get', $params, $submission)) {
       if (!empty($email_results['values'])) {
         foreach ($email_results['values'] as $value) {
           $email_contact_ids[$value['contact_id']] = $value['contact_id'];
@@ -156,7 +168,7 @@ function spwebformsync_find_same_contacts($data) {
             'contact_id' => $contact_id,
           );
           $contact_results = $spcivi->api('Contact', 'getsingle', $params);
-          if (_spcf_check_result($contact_results, 'contacten', 'get')) {
+          if (_spcf_check_result($contact_results, 'een contact', 'get', $params, $submission)) {
             if (!empty($contact_results)) {
               // Check if first name and last name are identical.
               if (
@@ -167,14 +179,20 @@ function spwebformsync_find_same_contacts($data) {
               }
             }
           }
+          else {
+            return FALSE;
+          }
         }
       }
+    }
+    else {
+      return FALSE;
     }
   }
   return $same_contacts;
 }
 
-function spwebformsync_add_contact($data, $sync_data) {
+function spwebformsync_add_contact($data, $sync_data, $submission) {
   global $base_url;
   $spcivi = \SPCivi::getInstance();
   $sync_items = spwebformsync_get_data_names(); 
@@ -188,6 +206,7 @@ function spwebformsync_add_contact($data, $sync_data) {
     'first_name' => 'first_name',
     'middle_name' => 'middle_name',
     'last_name' => 'last_name',
+    'email' => 'email',
   );
   $params = array(
     'contact_type' => 'Individual',
@@ -205,21 +224,10 @@ function spwebformsync_add_contact($data, $sync_data) {
   }
   unset($sync_items['name']);
   $create_contact_results = $spcivi->api('Contact', 'create', $params);
-  if (_spcf_check_result($create_contact_results, 'contacten', 'create')) {
+  if (_spcf_check_result($create_contact_results, 'een contact', 'create', $params, $submission)) {
     $contact_id = $create_contact_results['id'];
     drupal_set_message('Contact toegevoegd: ' . $contact_id);
 
-    // If available, add email.
-    if (!empty($data['email'])) {
-      $params = array(
-        'contact_id' => $contact_id,
-        'location_type_id' => 3,
-        'email' => $data['email'],
-        'is_primary' => 1,
-      );
-      $create_email_result = $spcivi->api('Email', 'create', $params);
-      _spcf_check_result($create_email_result, 'e-mailadressen', 'create');
-    }
     // If available, add phone.
     if (!empty($data['telephone'])) {
       if (strpos($data['telephone'], '06') === 0) {
@@ -236,7 +244,9 @@ function spwebformsync_add_contact($data, $sync_data) {
         'phone_type_id' => $phone_type_id,
       );
       $create_phone_result = $spcivi->api('Phone', 'create', $params);
-      _spcf_check_result($create_phone_result, 'telefoonnummers', 'create');
+      if (!_spcf_check_result($create_phone_result, 'een telefoonnummer', 'create', $params, $submission)) {
+        return FALSE;
+      }
     }
     // If available, add address.
     $autosync = array(
@@ -262,7 +272,9 @@ function spwebformsync_add_contact($data, $sync_data) {
     }
     if ($address_data_found) {
       $create_address_results = $spcivi->api('Address', 'create', $params);
-      _spcf_check_result($create_address_results, 'adressen', 'create');
+      if (!_spcf_check_result($create_address_result, 'een adres', 'create', $params, $submission)) {
+        return FALSE;
+      }
     }
     // If available set unverified tag.
     $tag_id = variable_get('spwebformsync_unverified_tag', FALSE);
@@ -272,14 +284,16 @@ function spwebformsync_add_contact($data, $sync_data) {
         'tag_id' => $tag_id,
       );
       $create_tag_results = $spcivi->api('EntityTag', 'create', $params);
-      _spcf_check_result($create_tag_results, 'tags', 'create');
+      if (!_spcf_check_result($create_tag_results, 'een tag', 'create', $params, $submission)) {
+        return FALSE;
+      }
     }
     return $contact_id;
   }
   return FALSE;
 }
 
-function spwebformsync_merge_contacts($data, $sync_data, $same_contacts) {
+function spwebformsync_merge_contacts($data, $sync_data, $same_contacts, $submission) {
   $spcivi = \SPCivi::getInstance();
 
   // Get contact.
@@ -288,7 +302,7 @@ function spwebformsync_merge_contacts($data, $sync_data, $same_contacts) {
     'id' => $contact_id,
   );
   $get_contact_results = $spcivi->api('Contact', 'get', $params);
-  if (_spcf_check_result($get_contact_results, 'contacten', 'get')) {
+  if (_spcf_check_result($get_contact_results, 'contacten', 'get', $params, $submission)) {
     if (!empty($get_contact_results['values'])) {
       $contact = array_pop($get_contact_results['values']);
 
@@ -320,7 +334,9 @@ function spwebformsync_merge_contacts($data, $sync_data, $same_contacts) {
           $params['last_name'] = $data['name'];
         }
         $merge_contact_results = $spcivi->api('Contact', 'create', $params);
-        _spcf_check_result($merge_contact_results, 'contacten', 'create');
+        if(!_spcf_check_result($merge_contact_results, 'contacten', 'create', $params, $submission)) {
+          return FALSE;
+        }
       }
 
       // Merge email data with contact.
@@ -330,8 +346,11 @@ function spwebformsync_merge_contacts($data, $sync_data, $same_contacts) {
           'contact_id' => $contact_id,
           'email' => $data['email']
         );
-        $get_email_result = $spcivi->api('Email', 'getsingle', $params);
-        if (!empty($get_email_result) && empty($get_email_result['id'])) {
+        $get_emails_result = $spcivi->api('Email', 'get', $params);
+        if(!_spcf_check_result($get_emails_result, 'een e-mailadres', 'get', $params, $submission)) {
+          return FALSE;
+        }
+        if (!empty($get_emails_result) && empty($get_emails_result['values'])) {
           if (empty($contact['email'])) {
             $primary = 1;
             $location_type_id = 3;
@@ -348,7 +367,9 @@ function spwebformsync_merge_contacts($data, $sync_data, $same_contacts) {
             'is_primary' => $primary,
           );
           $create_email_result = $spcivi->api('Email', 'create', $params);
-          _spcf_check_result($create_email_result, 'e-mailadressen', 'create');
+          if (!_spcf_check_result($create_email_result, 'een e-mailadres', 'create', $params, $submission)) {
+            return FALSE;
+          }
         }
       }
 
@@ -359,8 +380,11 @@ function spwebformsync_merge_contacts($data, $sync_data, $same_contacts) {
           'contact_id' => $contact_id,
           'phone_numeric' => $data['telephone']
         );
-        $get_phone_result = $spcivi->api('Phone', 'getsingle', $params);
-        if (!empty($get_phone_result) && empty($get_phone_result['id'])) {
+        $get_phone_result = $spcivi->api('Phone', 'get', $params);
+        if (!_spcf_check_result($get_phone_result, 'een telefoonnummer', 'get', $params, $submission)) {
+          return FALSE;
+        }
+        if (!empty($get_phone_result) && empty($get_phone_result['values'])) {
           // Phone doesn't exist, add.
           if (empty($contact['phone'])) {
             $primary = 1;
@@ -384,7 +408,9 @@ function spwebformsync_merge_contacts($data, $sync_data, $same_contacts) {
             'phone_type_id' => $phone_type_id,
           );
           $create_phone_result = $spcivi->api('Phone', 'create', $params);
-          _spcf_check_result($create_phone_result, 'telefoonnummers', 'create');
+          if(!_spcf_check_result($create_phone_result, 'een telefoonnummer', 'create', $params, $submission)) {
+            return FALSE;
+          }
         }
       }
 
@@ -395,18 +421,25 @@ function spwebformsync_merge_contacts($data, $sync_data, $same_contacts) {
           'contact_id' => $contact_id,
           'street_number' => $data['house_number'],
         );
-        $get_street_number_address_result = $spcivi->api('Address', 'getsingle', $params);
+        $get_street_number_address_result = $spcivi->api('Address', 'get', $params);
+        if(!_spcf_check_result($get_street_number_address_result, 'een adres', 'get', $params, $submission)) {
+          return FALSE;
+        }
       }
       if (!empty($data['postal_code'])) {
+        // Check if address with same postal code exists.
         $params = array(
           'contact_id' => $contact_id,
           'postal_code' => $data['postal_code'],
         );
-        $get_postal_code_address_result = $spcivi->api('Address', 'getsingle', $params);
+        $get_postal_code_address_result = $spcivi->api('Address', 'get', $params);
+        if(!_spcf_check_result($get_postal_code_address_result, 'een adres', 'get', $params, $submission)) {
+          return FALSE;
+        }
       }
       if (
-          empty($get_street_number_address_result['id']) &&
-          empty($get_postal_code_address_result['id'])
+          empty($get_street_number_address_result['values']) &&
+          empty($get_postal_code_address_result['values'])
       ) {
         // Add extra address.
         if (empty($contact['address_id'])) {
@@ -440,12 +473,15 @@ function spwebformsync_merge_contacts($data, $sync_data, $same_contacts) {
         }
         if ($address_data_found) {
           $create_address_results = $spcivi->api('Address', 'create', $params);
-          _spcf_check_result($create_address_results, 'adressen', 'create');
+          if(!_spcf_check_result($create_address_results, 'een adres', 'create', $params, $submission)) {
+            return FALSE;
+          }
         }
       }
       return $contact_id;
     }
   }
+  return FALSE;
 }
 
 function spwebformsync_contact_add_groups($submission, $sync_data, $contact) {
@@ -473,8 +509,11 @@ function spwebformsync_contact_add_groups($submission, $sync_data, $contact) {
       'group_id' => $key,
     );
     $create_group_membership = $spcivi->api('GroupContact', 'create', $params);
-    _spcf_check_result($create_group_membership, 'groepslidmaatschappen', 'create');
+    if (!_spcf_check_result($create_group_membership, 'groepslidmaatschappen', 'create', $params, $submission)) {
+      return FALSE;
+    }
   }
+  return TRUE;
 }
 
 function spwebformsync_split_house_number($house_number) {
@@ -514,10 +553,19 @@ function spwebformsync_split_name($name) {
   return FALSE;
 }
 
-function _spcf_check_result($result, $dataname, $action) {
+function _spcf_check_result($result, $dataname, $action, $data = NULL, $submission = NULL) {
   $action_name = ($action === 'get') ? 'ophalen' : 'aanmaken';
+  $place_name = ($action === 'get') ? 'uit' : 'in';
   if (!isset($result['is_error']) || $result['is_error'] == 1) {
-    drupal_set_message('Fout bij het ' . $action_name . ' van ' . $dataname . '.', 'error');
+    if (empty($submission)) {
+      drupal_set_message('Fout bij het ' . $action_name . ' van ' . $dataname . '.', 'error');
+      watchdog('spcivisync', '<p>Fout bij het ' . $action_name . ' van ' . $dataname . '.<pre>' . print_r($result, TRUE) . '</pre>Parameters:<pre>' . print_r($data, TRUE) . '</pre>', array(), WATCHDOG_ERROR);
+    }
+    else {
+      drupal_set_message('Fout bij het ' . $action_name . ' van ' . $dataname . ' ' . $place_name . ' CiviCRM (sid = ' . $submission->sid . ').', 'error');
+      watchdog('spcivisync', '<p>Fout bij het ' . $action_name . ' van ' . $dataname . ' ' . $place_name . ' CiviCRM (sid = ' . $submission->sid . ').</p>Resultaat:<pre>' . print_r($result, TRUE) . '</pre>Parameters:<pre>' . print_r($data, TRUE) . '</pre>', array(), WATCHDOG_ERROR);
+    }
+    spwebformsync_store_submission_sync_state($submission->nid, $submission->sid, 'error');
     return FALSE;
   }
   return TRUE;
@@ -530,3 +578,68 @@ function spwebformsync_check_submission_confirmed($sid) {
   }
   return FALSE;
 }
+
+/*
+ * Stores submission sync state.
+ */
+function spwebformsync_store_submission_sync_state($nid, $sid, $state) {
+  $states = array(
+    'unprocessed' => '0',
+    'synced' => '1',
+    'error' => '2',
+  );
+  if (!empty($nid) && !empty($sid) && isset($states[$state])) {
+    $new_state = $states[$state];
+    // Check if state exists.
+    $query = "SELECT state FROM {spwebformsync_syncstate} WHERE nid = :nid AND sid = :sid";
+    $result = db_query($query, array(':nid' => $nid, ':sid' => $sid));
+    $old_state = $result->fetchField(0);
+    if ($old_state !== FALSE && $old_state != $new_state) {
+      // Update existing state.
+      $updated = db_update('spwebformsync_syncstate')
+        ->fields(array(
+          'state' => $new_state,
+        ))
+        ->condition('sid', $sid)
+        ->condition('nid', $nid)
+        ->execute();
+      if (!empty($updated)) {
+        return TRUE;
+      }
+    }
+    else {
+      // Insert new state.
+      $id = db_insert('spwebformsync_syncstate')
+        ->fields(array(
+          'nid' => $nid,
+          'sid' => $sid,
+          'state' => $new_state,
+        ))
+        ->execute();
+      if (!empty($id)) {
+        return TRUE;
+      }
+    }
+  }
+  return FALSE;
+}
+
+function spwebformsync_get_unprocessed_submission_id($nid) {
+  if (!empty($nid)) {
+    $query = "SELECT sid FROM {spwebformsync_syncstate} WHERE nid = :nid AND state = 0 LIMIT 1";
+    $result = db_query($query, array(':nid' => $nid));
+    $sid = $result->fetchField(0);
+    if (!empty($sid)) {
+      return $sid;
+    }
+  }
+  return FALSE;
+}
+
+function spwebformsync_delete_all_webform_submissions($nid) {
+  $result = db_delete('spwebformsync_syncstate')
+    ->condition('nid', $id)
+    ->execute();
+  return $result;
+}
+

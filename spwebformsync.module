@@ -82,6 +82,11 @@ function spwebformsync_node_delete($node) {
       unset($sync_data[$node->nid]);
       variable_set('spwebformsync_sync_data', $sync_data);
       drupal_set_message('SP Webform sync nr. ' . $node->nid . ' attached to this form has been deleted.', 'warning');
+      // To do: delete all submission sync states for this sync.
+      $result = spwebformsync_delete_all_webform_submissions($node->nid);
+      if (!empty($result)) {
+        drupal_set_message('All postphoned webform syncs from webform nr. ' . $node->nid . ' have been deleted.', 'warning');
+      }
     }
   }
 }
@@ -92,17 +97,13 @@ function spwebformsync_node_delete($node) {
 function spwebformsync_webform_submission_insert($node, $submission) {
   $sync_data = variable_get('spwebformsync_sync_data', FALSE);
   $sync_type = variable_get('spwebformsync_sync_type'); 
-  if ($sync_type === 'direct') {
-    // Directly sync without check if confirmed.
-    if (!empty($sync_data) && isset($sync_data[$node->nid])) {
+  if (!empty($sync_data) && isset($sync_data[$node->nid])) {
+    $result = spwebformsync_store_submission_sync_state($node->nid, $submission->sid, 'unprocessed');
+    if (!$result) watchdog('spwebformsync', 'Error storing submission state in database (sid=' . $submission->sid . ').', array(), WATCHDOG_ERROR);
+    if ($sync_type === 'direct') {
+      // Directly sync without check if confirmed.
       spwebformsync_process_submission($submission);
     }
-  }
-  else {
-    // Postphone sync until cron.
-    $postphoned_submission_syncs = variable_get('spwebformsync_postphoned_submission_syncs', array());
-    $postphoned_submission_syncs[$node->nid][$submission->sid] = $submission->sid;
-    variable_set('spwebformsync_postphoned_submission_syncs', $postphoned_submission_syncs);
   }
 }
 
@@ -112,41 +113,31 @@ function spwebformsync_webform_submission_insert($node, $submission) {
  * Syncs not yet synced webform submissions.
  */
 function spwebformsync_cron() {
-  $synced = 0;
   $max_cron_number = 10 * variable_get('spwebformsync_cron_number', 0);
   $sync_data = variable_get('spwebformsync_sync_data', FALSE);
   if (!empty($sync_data)) {
-    $postphoned_submission_syncs = variable_get('spwebformsync_postphoned_submission_syncs', array());
     foreach ($sync_data as $webform_id => $data) {
-      if (!empty($postphoned_submission_syncs[$webform_id])) {
-        foreach ($postphoned_submission_syncs[$webform_id] as $key => $submission_id) {
-          $submission = webform_get_submission($webform_id, $submission_id);
-          // Check if submission is confirmed.
+      for ($i = 1; $i <= $max_cron_number; $i ++) {
+        $submission_id = spwebformsync_get_unprocessed_submission_id($webform_id); 
+        if (empty($submission_id)) {
+          break 2;
+        }
+        $submission = webform_get_submission($webform_id, $submission_id);
+        if (!empty($submission)) {
           $do_not_check_confirmation = variable_get('spwebformsync_do_not_check_confirmation', 0);
           $confirmed = spwebformsync_check_submission_confirmed($submission_id);
           if ((!$do_not_check_confirmation && $confirmed) || $do_not_check_confirmation) {
-            if (!empty($submission)) {
-              // Break out of loop when max number of syncs is reached.
-              if ($synced >= $max_cron_number) {
-                break 2;
-              }
-              spwebformsync_process_submission($submission);
-              $synced ++;
-              unset($postphoned_submission_syncs[$webform_id][$key]);
-            }
+            spwebformsync_process_submission($submission);
           }
         }
       }
     }
-    variable_set('spwebformsync_postphoned_submission_syncs', $postphoned_submission_syncs);
   }
 }
 
-function spwebformsync_webform_submission_delete($node, $submission) {
-  $postphoned_submission_syncs = variable_get('spwebformsync_postphoned_submission_syncs', FALSE); 
-  if (!empty($postphoned_submission_syncs[$submission->nid][$submission->sid])) {
-    unset($postphoned_submission_syncs[$submission->nid][$submission->sid]);
-    variable_set('spwebformsync_postphoned_submission_syncs', $postphoned_submission_syncs);
-    drupal_set_message('Uitgestelde webformulier synchronizatie nr. ' . $submission->sid . ' is verwijderd.');
-  }
+function spwebformsync_unprocessed_count($nid) {
+  $query = "SELECT COUNT(sid) FROM {spwebformsync_syncstate} WHERE nid = :nid AND state = 'unprocessed'";
+  $result = db_query($query, array(':nid' => $nid));
+  $count = $result->fetchfield(0);
+  return $count;
 }

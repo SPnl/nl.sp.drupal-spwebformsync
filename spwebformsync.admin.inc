@@ -391,18 +391,11 @@ function spwebformsync_group_autocomplete($string) {
 function spwebformsync_overview() {
   $sync_data = variable_get('spwebformsync_sync_data', array());
   if (!empty($sync_data)) {
-    $postphoned_submission_syncs = variable_get('spwebformsync_postphoned_submission_syncs', array());
     $data_names = spwebformsync_get_data_names();
     $markup = '<table><tr><th>Webformulier</th><th>Webformulier &#8594; Civicrm</th><th>Civi groepen</th><th>Hou hoog</th><th>Cron wachtrij</th><th></th></tr>';
     foreach ($sync_data as $data) {
       $form = node_load($data['webform']);
-      $postphoned_number = isset($postphoned_submission_syncs[$form->nid]) ? count($postphoned_submission_syncs[$form->nid]) : 0;
-      // If form doesn't exist, clear sync data for this form.
-      if ($form === FALSE) {
-        unset($sync_data[$data['webform']]);
-        variable_set('spwebformsync_sync_data', $sync_data);
-        continue;
-      }
+      $postphoned_number = spwebformsync_unprocessed_count($data['webform']);
       $markup .= '<tr><td><a href="/node/'. $form->nid . '">'.$form->title.'</a></td><td><table>';
       foreach ($data_names as $key => $name) {
         if (!empty($data[$key . '_component'])) {
@@ -438,19 +431,14 @@ function spwebformsync_overview() {
 
 function spwebformsync_delete($id) {
   $sync_data = variable_get('spwebformsync_sync_data', array());
-  $postphoned_submission_syncs = variable_get('spwebformsync_postphoned_submission_syncs', array());
-  if (!empty($postphoned_submission_syncs[$id])) {
-    unset($postphoned_submission_syncs[$id]);
-    variable_set('spwebformsync_postphoned_submission_syncs', $postphoned_submission_syncs);
+  $result = spwebformsync_delete_all_webform_submissions($id);
+  if (!empty($result)) {
     drupal_set_message('Cron wachtrij webformulier synchronizatie nr. ' . $id . ' is verwijderd.');
   }
   if (isset($sync_data[$id])) {
     unset($sync_data[$id]);
     variable_set('spwebformsync_sync_data', $sync_data);
     drupal_set_message('SP webformulier synchronizatie nr. ' . $id . ' is verwijderd.');
-  }
-  else {
-    drupal_set_message('SP webformulier synchronizatie nr. ' . $id . ' kon niet worden verwijderd.', 'error');
   }
   drupal_goto('/admin/config/sp/spwebformsync');
 }
