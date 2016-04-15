@@ -298,7 +298,7 @@ function spwebformsync_settings_form($form, &$form_state) {
     '#type' => 'select',
     '#title' => 'Hoeveel webformulier inzendingen moeten per keer gesynchronizeerd worden?',
     '#default_value' => variable_get('spwebformsync_cron_number', 0),
-    '#options' => range(0, 10, 1),
+    '#options' => range(0, 30, 1),
     '#states' => array(
       'invisible' => array(
         ':input[name="spwebformsync_sync_type"]' => array('value' => 'direct'),
@@ -387,12 +387,12 @@ function spwebformsync_settings_form($form, &$form_state) {
 }
 
 function spwebformsync_form_sync($form, &$form_state) {
-  $processed = spwebformsync_cron();
+  $processed = spwebformsync_sync();
   if (!empty($processed)) {
-    $text = '<p>Inzendingen die gesynced zijn (ids): ' . implode(', ', $processed) . '</p>';
+    $text = '<div id="sync_now"><p>Inzendingen die gesynced zijn (ids): ' . implode(', ', $processed) . '</p>';
   }
   else {
-    $text = '<p>Geen inzendingen gevonden.</p>';
+    $text = '<div id="sync_now"><p>Geen inzendingen gevonden.</p>';
   }
   $form['spwebformsync_sync_settings']['spwebformsync_sync_now']['#prefix'] = $text;
   return $form['spwebformsync_sync_settings']['spwebformsync_sync_now'];

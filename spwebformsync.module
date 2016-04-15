@@ -113,29 +113,10 @@ function spwebformsync_webform_submission_insert($node, $submission) {
  * Syncs not yet synced webform submissions.
  */
 function spwebformsync_cron() {
-  $max_cron_number = variable_get('spwebformsync_cron_number', 0);
-  $sync_data = variable_get('spwebformsync_sync_data', FALSE);
-  $processed = array();
-  if (!empty($sync_data)) {
-    foreach ($sync_data as $webform_id => $data) {
-      for ($i = 1; $i <= $max_cron_number; $i ++) {
-        $submission_id = spwebformsync_get_unprocessed_submission_id($webform_id); 
-        if (empty($submission_id)) {
-          break 2;
-        }
-        $submission = webform_get_submission($webform_id, $submission_id);
-        if (!empty($submission)) {
-          $do_not_check_confirmation = variable_get('spwebformsync_do_not_check_confirmation', 0);
-          $confirmed = spwebformsync_check_submission_confirmed($submission_id);
-          if ((!$do_not_check_confirmation && $confirmed) || $do_not_check_confirmation) {
-            spwebformsync_process_submission($submission);
-            $processed[$submission_id] = $submission_id;
-          }
-        }
-      }
-    }
+  $sync_type = variable_get('spwebformsync_sync_type'); 
+  if ($sync_type == 'cron') {
+    spwebformsync_sync();
   }
-  return $processed;
 }
 
 function spwebformsync_unprocessed_count($nid) {
