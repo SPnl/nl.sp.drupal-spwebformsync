@@ -150,3 +150,12 @@ function spwebformsync_parse_webform_select_options($webform, $selected_componen
   }
   return $options;
 }
+
+function spwebformsync_parse_group_form_select_value($group_raw) {
+  $group = '';
+  preg_match('@^.+\(([0-9]+)\)$@', $group_raw, $matches);
+  if (!empty($matches[1])) {
+    $group = $matches[1];
+  }
+  return $group;
+}

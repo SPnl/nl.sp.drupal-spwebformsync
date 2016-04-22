@@ -8,7 +8,6 @@ function spwebformsync_admin_form($form, &$form_state) {
   $form['#prefix'] = '<div id="spwebformsync_ajax_form">';
   $form['#suffix'] = '</div>';
 
-
   // Select webform element.
   // ----------------------------------------------------------
 
@@ -56,7 +55,7 @@ function spwebformsync_admin_form($form, &$form_state) {
       $webform_component_select_options = webform_component_list($webform, $webform_components, FALSE);
       $form['fields'] = array(
         '#type' => 'fieldset',
-        '#title' => 'Selecteer te synchronizeren webformulier velden',
+        '#title' => 'Selecteer naar het CiviCRM contact te synchronizeren webformulier velden',
       );
 
       foreach ($data_names as $data_key => $data_name) {
@@ -78,73 +77,12 @@ function spwebformsync_admin_form($form, &$form_state) {
         }
 
       }
-      // Add group selection.
-      // -----------------------------------------------------------------
-
-      // Make sure the groups are cached before autocompleting.
-      $groups = spwebformsync_get_civi_groups();
-
-      $form['group_select'] = array(
-        '#type' => 'fieldset',
-        '#title' => 'Selecteer groep(en) waar het contact aan moet worden toegevoegd',
-      );
-      // Store selected group.
-      if (!empty($form_state['values']['groups'])) {
-        $group_raw = $form_state['values']['groups'];
-        preg_match('@^.+\(([0-9]+)\)$@', $group_raw, $matches);
-        if (!empty($matches[1])) {
-          $group = $matches[1];
-          $form_state['storage']['selected_groups'][$group] = $groups[$group];
-          // Empty group field.
-          $form_state['input']['groups'] = '';
-        }
-      }
-      // Show message.
-      $form['group_select']['message_cache'] = array(
-        '#type' => 'markup',
-        '#markup' => '<p><strong>Leeg de Drupal cache als een CiviCRM groep niet te vinden is!</strong></p>',
-      );
-      // Show stored groups.
-      if (!empty($form_state['storage']['selected_groups'])) {
-        $markup = '<p><strong>Geselecteerd:</strong><br/>';
-        foreach ($form_state['storage']['selected_groups'] as $key => $group) {
-          $markup .= $group . '<br/>';
-        }
-      }
-      else {
-        $markup = '';
-      }
-      $form['group_select']['selected_groups'] = array(
-        '#type' => 'markup',
-        '#prefix' => '<div id="spwebformsync_selected_groups">',
-        '#suffix' => '</div>',
-        '#markup' => $markup,
-      );
-      $form['group_select']['groups'] = array(
-        '#type' => 'textfield',
-        '#title' => 'Selecteer groep',
-        '#autocomplete_path' => 'spwebformsync/group/autocomplete',
-        '#ajax' => array(
-          'wrapper' => 'spwebformsync_ajax_form',
-          'callback' => 'spwebformsync_ajax_form_callback',
-        ),
-      );
-
-      $form['group_select']['reset_groups'] = array(
-        '#type' => 'submit',
-        '#value' => 'Leeg selectie',
-        '#name' => 'reset_groups',
-        '#ajax' => array(
-          'wrapper' => 'spwebformsync_ajax_form',
-          'callback' => 'spwebformsync_ajax_form_callback',
-        ),
-      );
 
       // Keep notified of SP nieuws.
       // --------------------------------------------------------------------
       $form['hou_hoog'] = array(
         '#type' => 'fieldset', 
-        '#title' => 'Hou op de hoogte van SP nieuws.',
+        '#title' => 'Hou op de hoogte van SP nieuws',
       );
 
       $webform_components = spwebformsync_get_webform_allowed_components($webform_default, array('select' => 'select'));
@@ -187,15 +125,127 @@ function spwebformsync_admin_form($form, &$form_state) {
           '#markup' => '<p>Er zijn geen geschikte webformulier velden gevonden. (Zijn de gewenste veldtypes <a href="/admin/config/sp/spwebformsync/settings">geselecteerd</a>?)</p>', 
         );
       }
+
+      // Add group selection.
+      // -----------------------------------------------------------------
+
+      // Make sure the groups are cached before autocompleting.
+      $groups = spwebformsync_get_civi_groups();
+
+      $form['fixed_group_select'] = array(
+        '#type' => 'fieldset',
+        '#title' => 'Selecteer CiviCRM groep(en) waar het contact altijd aan moet worden toegevoegd',
+      );
+      // Show message.
+      $form['fixed_group_select']['message_cache'] = array(
+        '#type' => 'markup',
+        '#markup' => '<p><strong>Leeg de Drupal cache als een CiviCRM groep niet te vinden is!</strong></p>',
+      );
+      // Show stored groups.
+      if (!empty($form_state['storage']['selected_fixed_groups'])) {
+        $markup = '<p><strong>Geselecteerd:</strong><br/>';
+        foreach ($form_state['storage']['selected_fixed_groups'] as $key => $group) {
+          $markup .= $group . '<br/>';
+        }
+      }
+      else {
+        $markup = '';
+      }
+      $form['fixed_group_select']['selected_fixed_groups'] = array(
+        '#type' => 'markup',
+        '#markup' => $markup,
+      );
+      $form['fixed_group_select']['fixed_group'] = array(
+        '#type' => 'textfield',
+        '#title' => 'Selecteer groep',
+        '#autocomplete_path' => 'spwebformsync/group/autocomplete',
+      );
+
+      $form['fixed_group_select']['add_fixed_group'] = array(
+        '#type' => 'button',
+        '#value' => 'Voeg toe',
+        '#name' => 'add_fixed_group',
+        '#ajax' => array(
+          'wrapper' => 'spwebformsync_ajax_form',
+          'callback' => 'spwebformsync_ajax_form_callback',
+        ),
+      );
+
+      $form['fixed_group_select']['reset_fixed_groups'] = array(
+        '#type' => 'button',
+        '#value' => 'Leeg selectie',
+        '#name' => 'reset_fixed_groups',
+        '#ajax' => array(
+          'wrapper' => 'spwebformsync_ajax_form',
+          'callback' => 'spwebformsync_ajax_form_callback',
+        ),
+      );
+
+      // Variable group syncs.
+      // --------------------------------------------------------------------
+      $form['variable_group_select'] = array(
+        '#type' => 'fieldset', 
+        '#title' => 'Synchronizeer webformulier selectie veldwaarden naar CiviCRM groepen',
+      );
+      // Get webform select components.
+      $webform_components = spwebformsync_get_webform_allowed_components($webform_default, array('select' => 'select'));
+      // Remove hou hoog component.
+      if (!empty($form_state['values']['hou_hoog_component'])) {
+        unset($webform_components[$form_state['values']['hou_hoog_component']]);
+      }
+      // Show selected fields.
+      if (!empty($form_state['storage']['selected_webform_components'])) {
+        foreach ($form_state['storage']['selected_webform_components'] as $component_key => $component_values) {
+          // Remove already selected components from component list.
+          unset($webform_components[$component_key]);
+          $form['variable_group_select']['component_'.$component_key] = array(
+            '#type' => 'fieldset',
+            '#title' => 'Webform veld: '.$component_values['name'],
+          );
+          // Get webform_component options.
+          $component_options = spwebformsync_parse_webform_select_options($webform, $component_key);
+          foreach ($component_options as $key => $name) {
+            $form['variable_group_select']['component_'.$component_key]['component_'.$component_key.'_value_'.$key] = array(
+              '#type' => 'textfield',
+              '#title' => '"'.$name.'" toevoegen aan CiviCRM groep:',
+              '#autocomplete_path' => 'spwebformsync/group/autocomplete',
+            );
+          }
+        }
+      }
+      if (!empty($webform_components)) {
+        $webform_component_select_options = webform_component_list($webform, $webform_components, FALSE);
+        $form['variable_group_select']['webform_component'] = array(
+          '#type' => 'select',
+          '#title' => 'Formulier veld',
+          '#options' => $webform_component_select_options,
+          '#empty_option' => '- Geen -',
+        );
+        $form['variable_group_select']['add_webform_component'] = array(
+          '#type' => 'button',
+          '#value' => 'Voeg toe',
+          '#name' => 'add_webform_component',
+          '#ajax' => array(
+            'wrapper' => 'spwebformsync_ajax_form',
+            'callback' => 'spwebformsync_ajax_form_callback',
+          ),
+        );
+      }
+      else {
+        $form['variable_group_select']['variable_group_select_no_components'] = array(
+          '#markup' => '<p>Er zijn geen geschikte webformulier velden (meer) beschikbaar.</p>', 
+        );
+      }
+
       $form['submit'] = array(
         '#type'  => 'submit',
         '#name' => 'spcontact_submit',
-        '#value' => 'Voeg toe',
+        '#value' => 'Sla op',
       );
     }
     else {
       $form['no_components'] = array(
-        '#markup' => '<p>Er zijn geen geschikte webformulier velden gevonden. (Zijn de gewenste veldtypes <a href="/admin/config/sp/spwebformsync/settings">geselecteerd</a>?)</p>', 
+        '#markup' => '<p>Er zijn geen geschikte webformulier velden (meer) beschikbaar. (Zijn de gewenste veldtypes <a href="/admin/config/sp/spwebformsync/settings">geselecteerd</a>?)</p>', 
       );
     }
 
@@ -209,13 +259,42 @@ function spwebformsync_ajax_form_callback($form, &$form_state) {
 
 function spwebformsync_admin_form_validate($form, &$form_state) {
   // Empty selected groups if reset_groups button was clicked.
-  if (
-    !empty($form_state['triggering_element']['#name']) &&
-    $form_state['triggering_element']['#name'] == 'reset_groups'
-  ) {
-  unset($form_state['storage']['selected_groups']);
-  $form_state['rebuild'] = TRUE;
-  return;
+  if (!empty($form_state['triggering_element']['#name'])) {
+    switch ($form_state['triggering_element']['#name']) {
+    case 'reset_fixed_groups':
+      unset($form_state['storage']['selected_fixed_groups']);
+      $form_state['rebuild'] = TRUE;
+      return;
+      break;
+    case 'add_fixed_group':
+      $groups = spwebformsync_get_civi_groups();
+      // Store selected group.
+      if (!empty($form_state['values']['fixed_group'])) {
+        $group_raw = $form_state['values']['fixed_group'];
+        $group = spwebformsync_parse_group_form_select_value($group_raw);
+        if (!empty($group)) {
+          $form_state['storage']['selected_fixed_groups'][$group] = $groups[$group];
+          // Empty group field.
+          $form_state['input']['fixed_group'] = '';
+        }
+      }
+      $form_state['rebuild'] = TRUE;
+      return;
+      break;
+    case 'add_webform_component':
+      $webform_components = spwebformsync_get_webform_allowed_components($form_state['values']['webform'], array('select' => 'select'));
+      $webform_component_select_options = webform_component_list($webform, $webform_components, FALSE);
+      // Store selected webform component.
+      if (!empty($form_state['values']['webform_component'])) {
+        $component_id = $form_state['values']['webform_component'];
+        $form_state['storage']['selected_webform_components'][$component_id]['name'] = $webform_component_select_options[$component_id];
+        // Empty group field.
+        unset($form_state['input']['webform_component']);
+      }
+      $form_state['rebuild'] = TRUE;
+      return;
+      break;
+    }
   }
 
   // Validate form.
@@ -237,9 +316,6 @@ function spwebformsync_admin_form_validate($form, &$form_state) {
   ) {
   form_set_error('fields', 'Kies een combinatie van velden zodat een contact te bereiken is (telefoon, e-mail, huis)!');
   }
-  if (empty($form_state['storage']['selected_groups'])) {
-    form_set_error('group_select', 'Selecteer groep(en) waar contact aan moet worden toegevoegd!');
-  }
   if (!empty($values['hou_hoog_component']) && empty($values['hou_hoog_accept_value'])) {
     form_set_error('hou_hoog', "Kies de conditie waarbij mensen op de hoogte willen blijven.");
   }
@@ -247,6 +323,8 @@ function spwebformsync_admin_form_validate($form, &$form_state) {
 
 function spwebformsync_admin_form_submit($form, &$form_state) {
   $values = $form_state['values'];
+  $groups = spwebformsync_get_civi_groups();
+  $webform = node_load($form_state['values']['webform']);
   $sync_data = variable_get('spwebformsync_sync_data', array());
   // Store data.
   $static_fields = array(
@@ -254,7 +332,7 @@ function spwebformsync_admin_form_submit($form, &$form_state) {
     'hou_hoog_accept_value',
   );
   $storage_values = array(
-    'selected_groups',
+    'selected_fixed_groups',
   );
   foreach ($static_fields as $key) {
     if (isset($values[$key])) {
@@ -266,9 +344,30 @@ function spwebformsync_admin_form_submit($form, &$form_state) {
       $sync_data[$values['webform']][$key] = $form_state['storage'][$key];
     }
   }
+  // Store selected components to sync with CiviCRM contact data.
   foreach ($values as $key => $value) {
     if (strpos($key, '_component') !== FALSE) {
       $sync_data[$values['webform']][$key] = $value;
+    }
+  }
+  // Store selected variable group syncs.
+  foreach ($values as $key => $value) {
+    if (!empty($value)) {
+      $result = preg_match('/^component_(.*)_value_(.*)$/', $key, $matches);
+      if (!empty($result)) {
+        $component_id = $matches[1];
+        $selected_value_id = $matches[2];
+        $component_options = spwebformsync_parse_webform_select_options($webform, $component_id);
+        $group = spwebformsync_parse_group_form_select_value($value);
+        $sync_data[$values['webform']]['selected_variable_groups'][$component_id]['component_id'] = $component_id;
+        $sync_data[$values['webform']]['selected_variable_groups'][$component_id]['component_name'] = $webform->webform['components'][$component_id]['name'];
+        $sync_data[$values['webform']]['selected_variable_groups'][$component_id]['values'][] = array(
+          'value_id' => $selected_value_id,
+          'value_name' => $component_options[$selected_value_id],
+          'group_id' => $group,
+          'group_name' => $groups[$group],
+        );
+      }
     }
   }
   variable_set('spwebformsync_sync_data', $sync_data);
@@ -354,7 +453,7 @@ function spwebformsync_settings_form($form, &$form_state) {
   // Select webform component types form.
   $form['spwebformsync_webform_settings']['spwebformsync_allowed_component_types'] = array(
     '#type' => 'checkboxes',
-    '#title' => 'Kies webformulier veld types om te synchronizeren.',
+    '#title' => 'Kies webformulier tekst veld types om te kunnen synchronizeren.',
     '#options' => $options,
     '#default_value' => variable_get('spwebformsync_allowed_component_types', array()),
   );
@@ -421,7 +520,7 @@ function spwebformsync_overview() {
   $sync_data = variable_get('spwebformsync_sync_data', array());
   if (!empty($sync_data)) {
     $data_names = spwebformsync_get_data_names();
-    $markup = '<table><tr><th>Webformulier</th><th>Webformulier &#8594; Civicrm</th><th>Civi groepen</th><th>Hou hoog</th><th>Cron wachtrij</th><th></th></tr>';
+    $markup = '<table><tr><th>Webformulier</th><th>Webformulier &#8594; Civicrm</th><th>Vaste groepen</th><th>Variabele groepselecties</th><th>Hou hoog</th><th>Cron wachtrij</th><th></th></tr>';
     foreach ($sync_data as $data) {
       $form = node_load($data['webform']);
       $postphoned_number = spwebformsync_unprocessed_count($data['webform']);
@@ -432,9 +531,22 @@ function spwebformsync_overview() {
         }
       }
       $markup .= '</table></td><td>';
-      if (isset($data['selected_groups'])) {
-        foreach ($data['selected_groups'] as $groupname) {
+      if (isset($data['selected_fixed_groups'])) {
+        foreach ($data['selected_fixed_groups'] as $groupname) {
           $markup .= $groupname . '<br/>';
+        }
+      }
+      else {
+        $markup .= 'Geen';
+      }
+      $markup .= '</td><td>';
+      if (!empty($data['selected_variable_groups'])) {
+        foreach ($data['selected_variable_groups'] as $component_data) {
+          $markup .= '<p>'.$component_data['component_name'].'<br/><table>';
+          foreach ($component_data['values'] as $sync_data) {
+            $markup .= '<tr><td>'.$sync_data['value_name'].'</td><td>&nbsp;&#8594;&nbsp;</td><td>'.$sync_data['group_name'].'</td></tr>';
+          }
+          $markup .= '</table></p>';
         }
       }
       else {

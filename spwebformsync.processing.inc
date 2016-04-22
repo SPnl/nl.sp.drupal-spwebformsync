@@ -519,6 +519,7 @@ function spwebformsync_contact_add_groups($submission, $sync_data, $contact) {
   $spcivi = \SPCivi::getInstance();
   set_time_limit(60);
   $groups = array();
+  // Hou op de hoogte van sp nieuws.
   if (!empty($sync_data['hou_hoog_component'])) {
     if (!empty($submission->data[$sync_data['hou_hoog_component']][0])) {
       $selected_hou_hoog_value = $submission->data[$sync_data['hou_hoog_component']][0];
@@ -531,9 +532,25 @@ function spwebformsync_contact_add_groups($submission, $sync_data, $contact) {
       }
     }
   }
-  if (!empty($sync_data['selected_groups'])) {
-    $groups = $groups + $sync_data['selected_groups'];
+  // Vaste groepen.
+  if (!empty($sync_data['selected_fixed_groups'])) {
+    $groups = $groups + $sync_data['selected_fixed_groups'];
   }
+  // Variabele groepen.
+  $submission_data = $submission->data;
+  if (!empty($sync_data['selected_variable_groups'])) {
+    foreach ($sync_data['selected_variable_groups'] as $sync_values) {
+      $sync_component_id = $sync_values['component_id'];
+      if (!empty($submission_data[$sync_component_id])) {
+        foreach ($sync_values['values'] as $sync_field_group_data) {
+          if (in_array($sync_field_group_data['value_id'], $submission_data[$sync_component_id])) {
+            $groups[$sync_field_group_data['group_id']] = $sync_field_group_data['group_id'];
+          }
+        }
+      }
+    }
+  }
+  // Sync met CiviCRM.
   foreach ($groups as $key => $name) {
     $params = array(
       'contact_id' => $contact,
@@ -697,7 +714,7 @@ function spwebformsync_get_unprocessed_submission_id($nid) {
 
 function spwebformsync_delete_all_webform_submissions($nid) {
   $result = db_delete('spwebformsync_syncstate')
-    ->condition('nid', $id)
+    ->condition('nid', $nid)
     ->execute();
   return $result;
 }
