@@ -317,6 +317,9 @@ function spwebformsync_merge_contacts($data, $sync_data, $same_contacts, $submis
     if (!empty($get_contact_results['values'])) {
       $contact = array_pop($get_contact_results['values']);
 
+      drupal_set_message('Bestaand contact gevonden: ' . $contact_id);
+      watchdog('spwebformsync', 'Bestaand contact gevonden: ' . $contact_id);
+
       // Merge name data with contact.
       if (
         empty($contact['first_name']) &&
