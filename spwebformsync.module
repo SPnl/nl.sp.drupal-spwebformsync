@@ -107,6 +107,15 @@ function spwebformsync_webform_submission_insert($node, $submission) {
   }
 }
 
+function spwebformsync_webform_submission_delete($node, $submission) {
+  // Delete a record from a 3rd-party module table when a submission is deleted.
+  db_delete('spwebformsync_syncstate')
+    ->condition('nid', $node->nid)
+    ->condition('sid', $submission->sid)
+    ->execute();
+  drupal_set_message('Cleaned up webform sync for the deleted submission.');
+}
+
 /*
  * Implements hook_cron().
  *
