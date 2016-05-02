@@ -653,17 +653,19 @@ function spwebformsync_store_submission_sync_state($nid, $sid, $state) {
     $query = "SELECT state FROM {spwebformsync_syncstate} WHERE nid = :nid AND sid = :sid";
     $result = db_query($query, array(':nid' => $nid, ':sid' => $sid));
     $old_state = $result->fetchField(0);
-    if ($old_state !== FALSE && $old_state != $new_state) {
-      // Update existing state.
-      $updated = db_update('spwebformsync_syncstate')
-        ->fields(array(
-          'state' => $new_state,
-        ))
-        ->condition('sid', $sid)
-        ->condition('nid', $nid)
-        ->execute();
-      if (!empty($updated)) {
-        return TRUE;
+    if ($old_state !== FALSE) {
+      if ($old_state != $new_state) {
+        // Update existing state.
+        $updated = db_update('spwebformsync_syncstate')
+          ->fields(array(
+            'state' => $new_state,
+          ))
+          ->condition('sid', $sid)
+          ->condition('nid', $nid)
+          ->execute();
+        if (!empty($updated)) {
+          return TRUE;
+        }
       }
     }
     else {
