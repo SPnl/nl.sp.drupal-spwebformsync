@@ -24,6 +24,9 @@ function spwebformsync_process_submission($submission) {
         spwebformsync_store_submission_sync_state($submission->nid, $submission->sid, 'error');
       }
     }
+    else {
+      spwebformsync_store_submission_sync_state($submission->nid, $submission->sid, 'synced');
+    }
     watchdog('spwebformsync', 'Processed submission nr. '.$submission->sid);
   }
 }
@@ -97,6 +100,7 @@ function spwebformsync_check_submission_sufficient($data) {
     ) {
     return TRUE;
   }
+  watchdog('spwebformsync', '<p>Contact kon niet worden aangemaakt, te weinig data.</p><pre>'.print_r($data, TRUE).'</pre>');
   drupal_set_message('Contact kan niet worden gemaakt!', 'error');
   return FALSE;
 }
