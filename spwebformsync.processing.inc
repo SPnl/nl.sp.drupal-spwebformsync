@@ -591,6 +591,15 @@ function spwebformsync_split_name($name) {
   if (ctype_lower($spaceless)) {
     $name = ucwords($name);
   }
+  // Replace terms.
+  $replace = array(
+    'vd' => 'van de',
+  );
+  foreach ($replace as $orig => $new) {
+    if (strpos(' '.$orig.' ', $name) !== FALSE) {
+      $name = str_replace($orig, $new, $name);
+    }
+  }
   // Split name on middle_name.
   $middle_names_array = spwebformsync_middle_names(); 
   $middle_names_regex = implode('|', $middle_names_array);
