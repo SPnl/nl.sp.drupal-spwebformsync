@@ -72,6 +72,7 @@ function spwebformsync_valid_telephone($telephone) {
 
 function spwebformsync_valid_street($street) {
   $street = trim($street);
+  $street = ucfirst($street);
   if (!empty($street)) return $street;
 }
 
@@ -88,11 +89,13 @@ function spwebformsync_valid_house_number_addition($house_number_addition) {
 
 function spwebformsync_valid_street_and_number($street_and_number) {
   $street_and_number = trim($street_and_number);
+  $street_and_number = ucfirst($street_and_number);
   if (!empty($street_and_number)) return $street_and_number;
 }
 
 function spwebformsync_valid_locality($locality) {
   $locality = trim($locality);
+  $locality = ucfirst($locality);
   if (!empty($locality)) return $locality;
 }
 
