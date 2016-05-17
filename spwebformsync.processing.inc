@@ -74,27 +74,30 @@ function spwebformsync_parse_submission($submission, $sync_data) {
 }
 
 /**
- * Checks wether a submission contains sufficient data to create civi contact.
+ * Checks wether a submission contains sufficient data to create new or sync existing civi contact.
  */
 function spwebformsync_check_submission_sufficient($data) {
-  // Check if values are sufficient to create civi contact.
+  // Check if values are sufficient to create new or sync existing civi contact.
   if 
     (
-      !empty($data['email']) ||
-      !empty($data['telephone']) ||
+      !empty($data['contact_id']) ||
       (
-        !empty($data['street_and_number']) &&
-        !empty($data['locality'])
-
-      ) ||
-      (
-        !empty($data['house_number']) &&
+        !empty($data['email']) ||
+        !empty($data['telephone']) ||
         (
+          !empty($data['street_and_number']) &&
+          !empty($data['locality'])
+
+        ) ||
+        (
+          !empty($data['house_number']) &&
           (
-            !empty($data['street']) &&
-            !empty($data['locality'])
-          ) ||
-          !empty($data['postal_code'])
+            (
+              !empty($data['street']) &&
+              !empty($data['locality'])
+            ) ||
+            !empty($data['postal_code'])
+          )
         )
       )
     ) {
@@ -131,6 +134,23 @@ function spwebformsync_find_same_contacts($data, $submission) {
   $spcivi = \SPCivi::getInstance();
   set_time_limit(60);
   $same_contacts = array();
+
+  // Find same contact based on contact_id.
+  if (isset($data['contact_id'])) {
+    $contact_id = $data['contact_id'];
+    $params = array(
+      'option.limit' => 1,
+      'contact_id' => $contact_id,
+    );
+    $contact_results = $spcivi->api('Contact', 'get', $params);
+    if (_spcf_check_result($contact_results, 'een contact', 'get', $params, $submission)) {
+      if (!empty($contact_results['values'])) {
+        // Check if first name and last name are identical.
+        $same_contacts[$contact_id] = $contact_id;
+        return $same_contacts;
+      }
+    }
+  }
 
   // Find same contacts based on mobile phone.
   if (isset($data['telephone']) && strpos($data['telephone'], '06') === 0) {

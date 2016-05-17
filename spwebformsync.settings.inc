@@ -9,6 +9,7 @@
 
 function spwebformsync_get_data_names() {
   $data_names = array(
+    'contact_id' => 'Contact id',
     'name' => 'gehele naam',
     'first_name' => 'voornaam',
     'middle_name' => 'tussenvoegsel',
@@ -23,6 +24,16 @@ function spwebformsync_get_data_names() {
     'locality' => 'plaats',
   );
   return $data_names;
+}
+
+function spwebformsync_valid_contact_id($contact_id) {
+  $contact_id = trim($contact_id);
+  if (!empty($contact_id)) {
+    if (is_numeric($contact_id) && intval($contact_id) == $contact_id && $contact_id > 0) {
+      return $contact_id;
+    }
+  }
+  return FALSE;
 }
 
 function spwebformsync_valid_name($name) {

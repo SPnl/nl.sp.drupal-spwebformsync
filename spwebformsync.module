@@ -18,7 +18,7 @@ function spwebformsync_menu() {
   $items = array();
 
   $items['admin/config/sp/spwebformsync'] = array(
-    'title' => 'SP webformulier synchronizatie',
+    'title' => 'SP webformulier synchronisatie',
     'type' => MENU_NORMAL_ITEM,
     'page callback' => 'spwebformsync_overview',
     'file' => 'spwebformsync.admin.inc',
@@ -26,13 +26,13 @@ function spwebformsync_menu() {
   );
 
   $items['admin/config/sp/spwebformsync/overview'] = array(
-    'title' => 'Overzicht SP webformulier synchronizaties',
+    'title' => 'Overzicht SP webformulier synchronisaties',
     'type' => MENU_DEFAULT_LOCAL_TASK,
     'weight' => '0',
   );
 
   $items['admin/config/sp/spwebformsync/add'] = array(
-    'title' => 'SP webformulier synchronizatie toevoegen',
+    'title' => 'SP webformulier synchronisatie toevoegen',
     'type' => MENU_LOCAL_TASK,
     'page callback' => 'drupal_get_form',
     'page arguments' => array('spwebformsync_admin_form'),
@@ -51,7 +51,7 @@ function spwebformsync_menu() {
   );
 
   $items['admin/config/sp/spwebformsync/delete/%'] = array(
-    'title' => 'SP webformulier synchronizatie verwijderen',
+    'title' => 'SP webformulier synchronisatie verwijderen',
     'page callback' => 'spwebformsync_delete',
     'page arguments' => array(5),
     'access callback' => sprbs_access_check(),
