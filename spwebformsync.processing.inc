@@ -769,7 +769,7 @@ function spwebformsync_sync() {
       for ($i = 1; $i <= $max_cron_number; $i ++) {
         $submission_id = spwebformsync_get_unprocessed_submission_id($webform_id); 
         if (empty($submission_id)) {
-          break 2;
+          break;
         }
         $submission = webform_get_submission($webform_id, $submission_id);
         if (!empty($submission)) {
