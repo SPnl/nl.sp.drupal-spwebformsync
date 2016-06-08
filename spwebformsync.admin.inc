@@ -468,6 +468,42 @@ function spwebformsync_settings_form($form, &$form_state) {
     '#empty_option' => '- Geen -',
     '#default_value' => variable_get('spwebformsync_unverified_tag', array()),
   );
+
+  $webforms = spwebformsync_get_webforms();
+  if (!empty($webforms)) {
+    foreach ($webforms as $webform) {
+      $webform_select_options[$webform->nid] = $webform->title;
+    }
+    // Add existing form submissions.
+    $form['spwebformsync_add_submissions'] = array(
+      '#type' => 'fieldset',
+      '#title' => 'Inzendingen toevoegen aan wachtrij',
+      '#description' => 'Voeg formulierinzendingen toe aan de wachtrij die reeds bestonden vóór het aanmaken van de synchronisatie.',
+      '#prefix' => '<div id="spwebformsync_add_submissions">',
+      '#suffix' => '</div>',
+    );
+    $form['spwebformsync_add_submissions']['spwebformsync_add_submissions_select'] = array(
+      '#type' => 'select',
+      '#title' => 'Selecteer het webformulier',
+      '#options' => $webform_select_options,
+      '#empty_option' => '- Geen -',
+      '#name' => 'spwebformsync_add_submissions_select',
+    );
+  }
+  $form['spwebformsync_add_submissions']['spwebformsync_add_submissions_submit'] = array(
+    '#type' => 'button',
+    '#value' => 'Toevoegen',
+    '#name' => 'add_submissions_submit',
+    '#states' => array(
+      'visible' => array(
+        ':input[name="spwebformsync_add_submissions_select"]' => array('!value' => ''),
+      ),
+    ),
+    '#ajax' => array(
+      'wrapper' => 'spwebformsync_add_submissions',
+      'callback' => 'spwebformsync_form_add_submissions',
+    ),
+  );
   return system_settings_form($form);
 }
 
@@ -481,6 +517,30 @@ function spwebformsync_form_sync($form, &$form_state) {
   }
   $form['spwebformsync_sync_settings']['spwebformsync_sync_now']['#prefix'] = $text;
   return $form['spwebformsync_sync_settings']['spwebformsync_sync_now'];
+}
+
+function spwebformsync_form_add_submissions($form, &$form_state) {
+  $webform = $form_state['values']['spwebformsync_add_submissions_select'];
+  $query = "SELECT wf.sid FROM {spwebformsync_syncstate} sp RIGHT JOIN {webform_submissions} wf ON sp.sid = wf.sid WHERE wf.nid = :webform AND id IS NULL AND submitted IS NOT NULL";
+  $result = db_query($query, array(':webform' => $webform));
+  if ($result) {
+    $count = 0;
+    while ($sid = $result->fetchField(0)) {
+      // Add submission to list.
+      $res = db_insert('spwebformsync_syncstate')
+        ->fields(array(
+          'sid' => $sid,
+          'nid' => $webform,
+          'state' => '0',
+        ))
+        ->execute();
+      if (!empty($res)) {
+        $count ++;
+      }
+    }
+    drupal_set_message('Er zijn '.$count.' inzendingen toegevoegd aan de wachtrij.');
+  }
+  return $form['spwebformsync_add_submissions'];
 }
 
 function spwebformsync_group_autocomplete($string) {
