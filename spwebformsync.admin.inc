@@ -3,6 +3,9 @@
 function spwebformsync_admin_form($form, &$form_state) {
   //dpm($form_state);
   //dpm($form_state['storage']);
+  $values = empty($form_state['values']) ? array() : $form_state['values'];
+  $sync_data = variable_get('spwebformsync_sync_data', array());
+
   $form = array();
 
   $form['#prefix'] = '<div id="spwebformsync_ajax_form">';
@@ -19,7 +22,7 @@ function spwebformsync_admin_form($form, &$form_state) {
     }
 
     // Set default value.
-    $webform_default = isset($form_state['values']['webform']) ? $form_state['values']['webform'] : key($webform_select_options);
+    $webform_default = isset($values['webform']) ? $values['webform'] : key($webform_select_options);
 
     // Create form element.
     $form['webform'] = array(
@@ -27,6 +30,7 @@ function spwebformsync_admin_form($form, &$form_state) {
       '#title' => 'Kies het webformulier',
       '#options' => $webform_select_options,
       '#empty_option' => 'Kies:',
+      '#name' => 'webform',
       '#ajax' => array(
         'wrapper' => 'spwebformsync_ajax_form',
         'callback' => 'spwebformsync_ajax_form_callback',
@@ -39,9 +43,9 @@ function spwebformsync_admin_form($form, &$form_state) {
     );
   }
 
-  if (isset($form_state['values']['webform'])) {
+  if (isset($values['webform'])) {
     // Set default value.
-    $form['webform']['#default_value'] = $form_state['values']['webform'];
+    $form['webform']['#default_value'] = $values['webform'];
     unset($form['webform']['#empty_option']);
 
 
@@ -62,12 +66,19 @@ function spwebformsync_admin_form($form, &$form_state) {
       );
 
       foreach ($data_names as $data_key => $data_name) {
+        if (!empty($sync_data[$webform->nid][$data_key . '_component'])) {
+          $default_value = $sync_data[$webform->nid][$data_key . '_component'];
+        }
+        else {
+          $default_value = '';
+        }
         // Select name component.
         $form['fields'][$data_key . '_component'] = array(
           '#type' => 'select',
           '#title' => ucfirst($data_name),
           '#options' => $webform_component_select_options,
           '#empty_option' => '- Geen -',
+          '#default_value' => $default_value,
           '#ajax' => array(
             'wrapper' => 'spwebformsync_ajax_form',
             'callback' => 'spwebformsync_ajax_form_callback',
@@ -75,58 +86,10 @@ function spwebformsync_admin_form($form, &$form_state) {
         );
 
         // Set default value.
-        if (isset($form_state['values'][$data_key . '_component'])) {
-          $form['fields'][$data_key . '_component']['#default_value'] = $form_state['values'][$data_key . '_component'];
+        if (isset($values[$data_key . '_component'])) {
+          $form['fields'][$data_key . '_component']['#default_value'] = $values[$data_key . '_component'];
         }
 
-      }
-
-      // Keep notified of SP nieuws.
-      // --------------------------------------------------------------------
-      $form['hou_hoog'] = array(
-        '#type' => 'fieldset', 
-        '#title' => 'Hou op de hoogte van SP nieuws (optioneel)',
-      );
-
-      $webform_components = spwebformsync_get_webform_allowed_components($webform_default, array('select' => 'select'));
-      if (!empty($webform_components)) {
-        $webform_component_select_options = webform_component_list($webform, $webform_components, FALSE);
-        if (!empty(variable_get('spwebformsync_hou_hoog_group', FALSE))) {
-          $form['hou_hoog']['hou_hoog_component'] = array(
-            '#type' => 'select',
-            '#title' => 'Formulier veld',
-            '#options' => $webform_component_select_options,
-            '#empty_option' => '- Geen -',
-            '#ajax' => array(
-              'wrapper' => 'spwebformsync_ajax_form',
-              'callback' => 'spwebformsync_ajax_form_callback',
-            ),
-          );
-          if (!empty($form_state['values']['hou_hoog_component'])) {
-            $selected_component = $form_state['values']['hou_hoog_component'];
-            $hou_hoog_accept_value_options = spwebformsync_parse_webform_select_options($webform, $selected_component);
-            $form['hou_hoog']['hou_hoog_accept_value'] = array(
-              '#type' => 'select',
-              '#title' => 'Bij formulier veld waarde',
-              '#options' => $hou_hoog_accept_value_options,
-              '#empty_option' => '- Geen -',
-              '#ajax' => array(
-                'wrapper' => 'spwebformsync_ajax_form',
-                'callback' => 'spwebformsync_ajax_form_callback',
-              ),
-            );
-          }
-        }
-        else {
-          $form['hou_hoog']['hou_hoog_no_setting'] = array(
-            '#markup' => '<p>Kies in de instellingen eerst een groep waaraan de deelnemers moeten worden toegevoegd die op de hoogte willen blijven van belangrijk SP nieuws.</p>', 
-          );
-        }
-      }
-      else {
-        $form['hou_hoog']['hou_hoog_no_components'] = array(
-          '#markup' => '<p>Er zijn geen geschikte webformulier velden gevonden. (Zijn de gewenste veldtypes <a href="/admin/config/sp/spwebformsync/settings">geselecteerd</a>?)</p>', 
-        );
       }
 
       // Add group selection.
@@ -192,10 +155,6 @@ function spwebformsync_admin_form($form, &$form_state) {
       );
       // Get webform select components.
       $webform_components = spwebformsync_get_webform_allowed_components($webform_default, array('select' => 'select'));
-      // Remove hou hoog component.
-      if (!empty($form_state['values']['hou_hoog_component'])) {
-        unset($webform_components[$form_state['values']['hou_hoog_component']]);
-      }
       // Show selected fields.
       if (!empty($form_state['storage']['selected_webform_components'])) {
         foreach ($form_state['storage']['selected_webform_components'] as $component_key => $component_values) {
@@ -208,10 +167,19 @@ function spwebformsync_admin_form($form, &$form_state) {
           // Get webform_component options.
           $component_options = spwebformsync_parse_webform_select_options($webform, $component_key);
           foreach ($component_options as $key => $name) {
+            if (!empty($sync_data[$webform->nid]['selected_variable_groups'][$component_key]['values'][$key])) {
+              $var_values = $sync_data[$webform->nid]['selected_variable_groups'][$component_key]['values'][$key];
+              $default = $var_values['group_name'] . ' (' . $var_values['group_id'] . ')';
+            }
+            else {
+              $default = '';
+            }
+            // Get default value.
             $form['variable_group_select']['component_'.$component_key]['component_'.$component_key.'_value_'.$key] = array(
               '#type' => 'textfield',
               '#title' => '"'.$name.'" toevoegen aan CiviCRM groep:',
               '#autocomplete_path' => 'spwebformsync/group/autocomplete',
+              '#default_value' => $default,
             );
           }
         }
@@ -261,11 +229,28 @@ function spwebformsync_ajax_form_callback($form, &$form_state) {
 }
 
 function spwebformsync_admin_form_validate($form, &$form_state) {
-  // Empty selected groups if reset_groups button was clicked.
+  $storage = &$form_state['storage'];
+  $values = $form_state['values'];
+  $webform = $values['webform'];
   if (!empty($form_state['triggering_element']['#name'])) {
     switch ($form_state['triggering_element']['#name']) {
+    case 'webform':
+      // Set stored values if available.
+      if (!empty($webform)) {
+        $sync_data = variable_get('spwebformsync_sync_data', array());
+        if (!empty($sync_data[$webform]['selected_fixed_groups'])) {
+          $storage['selected_fixed_groups'] = $sync_data[$webform]['selected_fixed_groups'];
+        }
+        if (!empty($sync_data[$webform]['selected_variable_groups'])) {
+          foreach ($sync_data[$webform]['selected_variable_groups'] as $data) {
+            $storage['selected_webform_components'][$data['component_id']]['name'] = $data['component_name'];
+          }
+        }
+      }
+      return;
+      break;
     case 'reset_fixed_groups':
-      unset($form_state['storage']['selected_fixed_groups']);
+      unset($storage['selected_fixed_groups']);
       $form_state['rebuild'] = TRUE;
       return;
       break;
@@ -290,7 +275,7 @@ function spwebformsync_admin_form_validate($form, &$form_state) {
       // Store selected webform component.
       if (!empty($form_state['values']['webform_component'])) {
         $component_id = $form_state['values']['webform_component'];
-        $form_state['storage']['selected_webform_components'][$component_id]['name'] = $webform_component_select_options[$component_id];
+        $storage['selected_webform_components'][$component_id]['name'] = $webform_component_select_options[$component_id];
         // Empty group field.
         unset($form_state['input']['webform_component']);
       }
@@ -320,9 +305,6 @@ function spwebformsync_admin_form_validate($form, &$form_state) {
   ) {
   form_set_error('fields', 'Kies een combinatie van velden zodat een contact te bereiken is (telefoon, e-mail, huis)!');
   }
-  if (!empty($values['hou_hoog_component']) && empty($values['hou_hoog_accept_value'])) {
-    form_set_error('hou_hoog', "Kies de conditie waarbij mensen op de hoogte willen blijven.");
-  }
 }
 
 function spwebformsync_admin_form_submit($form, &$form_state) {
@@ -333,7 +315,6 @@ function spwebformsync_admin_form_submit($form, &$form_state) {
   // Store data.
   $static_fields = array(
     'webform',
-    'hou_hoog_accept_value',
   );
   $storage_values = array(
     'selected_fixed_groups',
@@ -365,7 +346,7 @@ function spwebformsync_admin_form_submit($form, &$form_state) {
         $group = spwebformsync_parse_group_form_select_value($value);
         $sync_data[$values['webform']]['selected_variable_groups'][$component_id]['component_id'] = $component_id;
         $sync_data[$values['webform']]['selected_variable_groups'][$component_id]['component_name'] = $webform->webform['components'][$component_id]['name'];
-        $sync_data[$values['webform']]['selected_variable_groups'][$component_id]['values'][] = array(
+        $sync_data[$values['webform']]['selected_variable_groups'][$component_id]['values'][$selected_value_id] = array(
           'value_id' => $selected_value_id,
           'value_name' => $component_options[$selected_value_id],
           'group_id' => $group,
@@ -390,7 +371,7 @@ function spwebformsync_settings_form($form, &$form_state) {
   );
   $form['spwebformsync_sync_settings']['spwebformsync_sync_type'] = array(
     '#type' => 'radios',
-    '#title' => 'Hoe wilt u contacten synchronizeren?',
+    '#title' => 'Hoe wilt u contacten synchroniseren?',
     '#default_value' => variable_get('spwebformsync_sync_type', array()),
     '#options' => array('direct' => 'Direct (geen controle bevestiging inzending!)', 'cron' => 'Cron', 'manual' => 'Handmatig'),
     '#required' => TRUE,
@@ -399,7 +380,7 @@ function spwebformsync_settings_form($form, &$form_state) {
   // Max sync items per cron.
   $form['spwebformsync_sync_settings']['spwebformsync_cron_number'] = array(
     '#type' => 'select',
-    '#title' => 'Hoeveel webformulier inzendingen moeten per keer gesynchronizeerd worden?',
+    '#title' => 'Hoeveel webformulier inzendingen moeten per keer gesynchroniseerd worden?',
     '#default_value' => variable_get('spwebformsync_cron_number', 0),
     '#options' => range(0, 30, 1),
     '#states' => array(
@@ -423,7 +404,7 @@ function spwebformsync_settings_form($form, &$form_state) {
 
   $form['spwebformsync_sync_settings']['spwebformsync_sync_now'] = array(
     '#type' => 'button',
-    '#value' => 'Nu synchronizeren',
+    '#value' => 'Nu synchroniseren',
     '#name' => 'sync_now',
     '#states' => array(
       'visible' => array(
@@ -457,7 +438,7 @@ function spwebformsync_settings_form($form, &$form_state) {
   // Select webform component types form.
   $form['spwebformsync_webform_settings']['spwebformsync_allowed_component_types'] = array(
     '#type' => 'checkboxes',
-    '#title' => 'Kies webformulier tekst veld types om te kunnen synchronizeren.',
+    '#title' => 'Kies webformulier tekst veld types om te kunnen synchroniseren.',
     '#options' => $options,
     '#default_value' => variable_get('spwebformsync_allowed_component_types', array()),
   );
@@ -466,14 +447,6 @@ function spwebformsync_settings_form($form, &$form_state) {
   $form['spwebformsync_civicrm_settings'] = array(
     '#type' => 'fieldset',
     '#title' => 'CiviCRM synchronisatie instellingen',
-  );
-  $groups = spwebformsync_get_civi_groups();
-  $form['spwebformsync_civicrm_settings']['spwebformsync_hou_hoog_group'] = array(
-    '#type' => 'select',
-    '#title' => 'Kies de groep van mensen die op de hoogte willen blijven van belangrijk SP nieuws.',
-    '#options' => $groups,
-    '#empty_option' => '- Geen -',
-    '#default_value' => variable_get('spwebformsync_hou_hoog_group', array()),
   );
   $tags = spwebformsync_get_civi_tags();
   if (empty(variable_get('spwebformsync_unverified_tag', FALSE)) && $id = array_search('Ongecontroleerd', $tags)) {
@@ -524,7 +497,7 @@ function spwebformsync_overview() {
   $sync_data = variable_get('spwebformsync_sync_data', array());
   if (!empty($sync_data)) {
     $data_names = spwebformsync_get_data_names();
-    $markup = '<table><tr><th>Webformulier</th><th>Webformulier &#8594; Civicrm</th><th>Vaste groepen</th><th>Variabele groepselecties</th><th>Hou hoog</th><th>Cron wachtrij</th><th></th></tr>';
+    $markup = '<table><tr><th>Webformulier</th><th>Webformulier &#8594; Civicrm</th><th>Vaste groepen</th><th>Variabele groepselecties</th><th>Cron wachtrij</th><th></th></tr>';
     foreach ($sync_data as $data) {
       $form = node_load($data['webform']);
       $postphoned_number = spwebformsync_unprocessed_count($data['webform']);
@@ -557,13 +530,7 @@ function spwebformsync_overview() {
       else {
         $markup .= 'Geen';
       }
-      if (!empty($data['hou_hoog_component'])) {
-        $markup .= '</td><td><table><tr><td>Veld:&nbsp;</td><td>' . $form->webform['components'][$data['hou_hoog_component']]['name'] . '</td></tr><tr><td>Conditie:&nbsp;</td><td>' . $data['hou_hoog_accept_value'] . '</td></tr></table></td>';
-      }
-      else {
-        $markup .= '</td><td>Geen</td>';
-      }
-      $markup .= '<td>' . $postphoned_number . '</td>';
+      $markup .= '</td><td>' . $postphoned_number . '</td>';
       $markup .= '<td><a href="/admin/config/sp/spwebformsync/delete/' . $form->nid . '">verwijder</a></td></tr>';
     }
     $markup .= '</table>';

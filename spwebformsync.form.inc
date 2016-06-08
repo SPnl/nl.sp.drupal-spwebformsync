@@ -22,6 +22,7 @@ function spwebformsync_get_webforms() {
       $webforms = entity_load('node', $nids);
     }
   }
+  /*
   // Filter already set forms.
   $sync_data = variable_get('spwebformsync_sync_data', array());
   foreach ($webforms as $key => $webform) {
@@ -29,6 +30,7 @@ function spwebformsync_get_webforms() {
       unset($webforms[$key]);
     }
   }
+  */
   return $webforms;
 }
 

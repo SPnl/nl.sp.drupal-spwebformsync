@@ -31,8 +31,8 @@ function spwebformsync_menu() {
     'weight' => '0',
   );
 
-  $items['admin/config/sp/spwebformsync/add'] = array(
-    'title' => 'SP webformulier synchronisatie toevoegen',
+  $items['admin/config/sp/spwebformsync/configure'] = array(
+    'title' => 'SP webformulier synchronizatie toevoegen of bewerken',
     'type' => MENU_LOCAL_TASK,
     'page callback' => 'drupal_get_form',
     'page arguments' => array('spwebformsync_admin_form'),
