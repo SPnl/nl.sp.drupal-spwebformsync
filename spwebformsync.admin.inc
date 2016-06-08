@@ -1,8 +1,6 @@
 <?php
 
 function spwebformsync_admin_form($form, &$form_state) {
-  //dpm($form_state);
-  //dpm($form_state['storage']);
   $values = empty($form_state['values']) ? array() : $form_state['values'];
   $sync_data = variable_get('spwebformsync_sync_data', array());
 
@@ -181,6 +179,16 @@ function spwebformsync_admin_form($form, &$form_state) {
               '#autocomplete_path' => 'spwebformsync/group/autocomplete',
               '#default_value' => $default,
             );
+            $form['variable_group_select']['component_'.$component_key]['del_component_'.$component_key] = array(
+              '#type' => 'button',
+              '#value' => 'Verwijder',
+              '#name' => 'del_component_'.$component_key,
+              '#weight' => 99,
+              '#ajax' => array(
+                'wrapper' => 'spwebformsync_ajax_form',
+                'callback' => 'spwebformsync_ajax_form_callback',
+              ),
+            );
           }
         }
       }
@@ -233,7 +241,8 @@ function spwebformsync_admin_form_validate($form, &$form_state) {
   $values = $form_state['values'];
   $webform = $values['webform'];
   if (!empty($form_state['triggering_element']['#name'])) {
-    switch ($form_state['triggering_element']['#name']) {
+    $trigger = $form_state['triggering_element']['#name'];
+    switch ($trigger) {
     case 'webform':
       // Set stored values if available.
       if (!empty($webform)) {
@@ -282,6 +291,12 @@ function spwebformsync_admin_form_validate($form, &$form_state) {
       $form_state['rebuild'] = TRUE;
       return;
       break;
+    }
+
+    // Delete variable group syncs button.
+    preg_match('/^del_component_([0-9]+)$/', $trigger, $matches);
+    if (!empty($matches[1])) {
+      unset($storage['selected_webform_components'][$matches[1]]);
     }
   }
 
