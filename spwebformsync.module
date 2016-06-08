@@ -35,7 +35,7 @@ function spwebformsync_menu() {
     'title' => 'SP webformulier synchronizatie toevoegen of bewerken',
     'type' => MENU_LOCAL_TASK,
     'page callback' => 'drupal_get_form',
-    'page arguments' => array('spwebformsync_admin_form'),
+    'page arguments' => array('spwebformsync_admin_form', arg(4)),
     'file' => 'spwebformsync.admin.inc',
     'access callback' => sprbs_access_check(),
   );

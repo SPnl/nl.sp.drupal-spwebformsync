@@ -1,8 +1,15 @@
 <?php
 
-function spwebformsync_admin_form($form, &$form_state) {
+function spwebformsync_admin_form($form, &$form_state, $form_id = NULL) {
   $values = empty($form_state['values']) ? array() : $form_state['values'];
   $sync_data = variable_get('spwebformsync_sync_data', array());
+  if (!empty((int) $form_id)) {
+    $webform_default = (int) $form_id;
+    spwebformsync_store_sync_data($form_state, $webform_default);
+  } 
+  else {
+    $webform_default = isset($values['webform']) ? $values['webform'] : '';
+  }
 
   $form = array();
 
@@ -18,9 +25,6 @@ function spwebformsync_admin_form($form, &$form_state) {
     foreach ($webforms as $webform) {
       $webform_select_options[$webform->nid] = $webform->title;
     }
-
-    // Set default value.
-    $webform_default = isset($values['webform']) ? $values['webform'] : key($webform_select_options);
 
     // Create form element.
     $form['webform'] = array(
@@ -41,9 +45,9 @@ function spwebformsync_admin_form($form, &$form_state) {
     );
   }
 
-  if (isset($values['webform'])) {
+  if (!empty($webform_default)) {
     // Set default value.
-    $form['webform']['#default_value'] = $values['webform'];
+    $form['webform']['#default_value'] = $webform_default;
     unset($form['webform']['#empty_option']);
 
 
@@ -245,17 +249,7 @@ function spwebformsync_admin_form_validate($form, &$form_state) {
     switch ($trigger) {
     case 'webform':
       // Set stored values if available.
-      if (!empty($webform)) {
-        $sync_data = variable_get('spwebformsync_sync_data', array());
-        if (!empty($sync_data[$webform]['selected_fixed_groups'])) {
-          $storage['selected_fixed_groups'] = $sync_data[$webform]['selected_fixed_groups'];
-        }
-        if (!empty($sync_data[$webform]['selected_variable_groups'])) {
-          foreach ($sync_data[$webform]['selected_variable_groups'] as $data) {
-            $storage['selected_webform_components'][$data['component_id']]['name'] = $data['component_name'];
-          }
-        }
-      }
+      spwebformsync_store_sync_data($form_state, $webform);
       return;
       break;
     case 'reset_fixed_groups':
@@ -546,7 +540,7 @@ function spwebformsync_overview() {
         $markup .= 'Geen';
       }
       $markup .= '</td><td>' . $postphoned_number . '</td>';
-      $markup .= '<td><a href="/admin/config/sp/spwebformsync/delete/' . $form->nid . '">verwijder</a></td></tr>';
+      $markup .= '<td><a href="/admin/config/sp/spwebformsync/configure/' . $form->nid . '">bewerk</a> <a href="/admin/config/sp/spwebformsync/delete/' . $form->nid . '">verwijder</a></td></tr>';
     }
     $markup .= '</table>';
   }
@@ -569,4 +563,19 @@ function spwebformsync_delete($id) {
     drupal_set_message('SP webformulier synchronisatie nr. ' . $id . ' is verwijderd.');
   }
   drupal_goto('/admin/config/sp/spwebformsync');
+}
+
+function spwebformsync_store_sync_data(&$form_state, $webform) {
+  $storage = &$form_state['storage'];
+  if (!empty($webform)) {
+    $sync_data = variable_get('spwebformsync_sync_data', array());
+    if (!empty($sync_data[$webform]['selected_fixed_groups'])) {
+      $storage['selected_fixed_groups'] = $sync_data[$webform]['selected_fixed_groups'];
+    }
+    if (!empty($sync_data[$webform]['selected_variable_groups'])) {
+      foreach ($sync_data[$webform]['selected_variable_groups'] as $data) {
+        $storage['selected_webform_components'][$data['component_id']]['name'] = $data['component_name'];
+      }
+    }
+  }
 }
