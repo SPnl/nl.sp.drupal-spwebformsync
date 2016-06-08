@@ -477,8 +477,8 @@ function spwebformsync_settings_form($form, &$form_state) {
     // Add existing form submissions.
     $form['spwebformsync_add_submissions'] = array(
       '#type' => 'fieldset',
-      '#title' => 'Inzendingen toevoegen aan wachtrij',
-      '#description' => 'Voeg formulierinzendingen toe aan de wachtrij die reeds bestonden vóór het aanmaken van de synchronisatie.',
+      '#title' => 'Inzendingen toevoegen aan sync wachtrij',
+      '#description' => 'Voeg formulierinzendingen toe aan de synchronisatie wachtrij die reeds bestonden vóór het aanmaken van de synchronisatie.',
       '#prefix' => '<div id="spwebformsync_add_submissions">',
       '#suffix' => '</div>',
     );
