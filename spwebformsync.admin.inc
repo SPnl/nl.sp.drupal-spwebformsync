@@ -288,7 +288,7 @@ function spwebformsync_admin_form_validate($form, &$form_state) {
     }
 
     // Delete variable group syncs button.
-    preg_match('/^del_component_([0-9]+)$/', $trigger, $matches);
+    preg_match('/^del_component_([0-9]+)$/', $trigger, $matches);
     if (!empty($matches[1])) {
       unset($storage['selected_webform_components'][$matches[1]]);
     }
