@@ -156,7 +156,10 @@ function spwebformsync_find_same_contacts($data, $submission) {
   if (
     isset($data['telephone']) &&
     strpos($data['telephone'], '06') === 0 &&
-    isset($data['last_name'])
+    (
+      isset($data['last_name']) ||
+      isset($data['first_name'])
+    )
   ) {
     $same_contacts_phone = array();
     $mobile_phone = $data['telephone'];
@@ -191,7 +194,14 @@ function spwebformsync_find_same_contacts($data, $submission) {
           // Check if first name and last name are identical.
           $contact = array_pop($contact_results['values']);
           if (
-            $data['last_name'] === $contact['last_name']
+            (
+              isset($data['last_name']) &&
+              strpos($contact['display_name'], $data['last_name']) !== FALSE
+            ) ||
+            (
+              isset($data['first_name']) &&
+              strpos($contact['display_name'], $data['first_name']) !== FALSE
+            )
           ) {
           $same_contacts[$phone_contact_id] = $phone_contact_id;
           }
