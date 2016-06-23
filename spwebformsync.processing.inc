@@ -153,7 +153,12 @@ function spwebformsync_find_same_contacts($data, $submission) {
   }
 
   // Find same contacts based on mobile phone.
-  if (isset($data['telephone']) && strpos($data['telephone'], '06') === 0) {
+  if (
+    isset($data['telephone']) &&
+    strpos($data['telephone'], '06') === 0 &&
+    isset($data['last_name'])
+  ) {
+    $same_contacts_phone = array();
     $mobile_phone = $data['telephone'];
     $params = array(
       'option.limit' => 5,
@@ -166,7 +171,29 @@ function spwebformsync_find_same_contacts($data, $submission) {
       if (_spcf_check_result($mobile_phone_results, 'telefoonnummers', 'get', $params, $submission)) {
         if (!empty($mobile_phone_results['values'])) {
           foreach ($mobile_phone_results['values'] as $value) {
-            $same_contacts[$value['contact_id']] = $value['contact_id'];
+            $same_contacts_phone[$value['contact_id']] = $value['contact_id'];
+          }
+        }
+      }
+      else {
+        return FALSE;
+      }
+    }
+    // check if found contacts have same last name.
+    foreach ($same_contacts_phone as $phone_contact_id) {
+      // Get contact information.
+      $params = array(
+        'contact_id' => $phone_contact_id,
+      );
+      $contact_results = $spcivi->api('Contact', 'get', $params);
+      if (_spcf_check_result($contact_results, 'een contact', 'get', $params, $submission)) {
+        if (!empty($contact_results['values'])) {
+          // Check if first name and last name are identical.
+          $contact = array_pop($contact_results['values']);
+          if (
+            $data['last_name'] === $contact['last_name']
+          ) {
+          $same_contacts[$phone_contact_id] = $phone_contact_id;
           }
         }
       }
@@ -601,7 +628,7 @@ function spwebformsync_contact_add_groups($submission, $sync_data, $contact) {
 
 function spwebformsync_split_house_number($house_number) {
   $house_number = trim($house_number);
-  $regex = "@^([0-9]+) *(.*)$@";
+  $regex = "@^([0-9]+)[!0-9](.*)$@";
   if (preg_match($regex, $house_number, $matches)) {
     return $matches;
   }
