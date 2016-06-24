@@ -196,11 +196,11 @@ function spwebformsync_find_same_contacts($data, $submission) {
           if (
             (
               isset($data['last_name']) &&
-              strpos($contact['display_name'], $data['last_name']) !== FALSE
+              strpos(strtolower($contact['display_name']), strtolower($data['last_name'])) !== FALSE
             ) ||
             (
               isset($data['first_name']) &&
-              strpos($contact['display_name'], $data['first_name']) !== FALSE
+              strpos(strtolower($contact['display_name']), strtolower($data['first_name'])) !== FALSE
             )
           ) {
           $same_contacts[$phone_contact_id] = $phone_contact_id;
