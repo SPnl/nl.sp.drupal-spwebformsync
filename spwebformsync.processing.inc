@@ -115,6 +115,28 @@ function spwebformsync_sync_contact($submission, $data, $sync_data) {
     // Sync contact.
     if (empty($same_contacts) || count($same_contacts) > 1) {
       $contact = spwebformsync_add_contact($data, $sync_data, $submission);
+      if (count($same_contacts) > 1) {
+        $merge_email = variable_get('spwebformsync_merge_contact_email_address', '');
+        if (!empty($merge_email)) {
+          // Send mail for manually merging.
+          $params = array(
+            'contact_id' => $contact,
+          );
+          $message = drupal_mail('spwebformsync', 'manual_merge', $merge_email, language_default(), $params, 'webmaster@sp.nl');
+          if (!empty($message['result'])) { 
+            watchdog('spwebformsync', 'Contact handmatig samenvoegen, mail verzonden.');
+            drupal_set_message('Contact handmatig samenvoegen, mail verzonden.');
+          }
+          else {
+            watchdog('spwebformsync', 'Contact handmatig samenvoegen, geen mail verzonden verzonden (fout opgetreden).');
+            drupal_set_message('Contact handmatig samenvoegen, geen mail verzonden (fout opgetreden).');
+          }
+        }
+        else {
+          watchdog('spwebformsync', 'Contact handmatig samenvoegen, geen mail verzonden.');
+          drupal_set_message('Contact handmatig samenvoegen, geen mail verzonden.');
+        }
+      }
     }
     else {
       $contact = spwebformsync_merge_contacts($data, $sync_data, $same_contacts, $submission);

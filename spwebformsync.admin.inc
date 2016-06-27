@@ -474,6 +474,18 @@ function spwebformsync_settings_form($form, &$form_state) {
     foreach ($webforms as $webform) {
       $webform_select_options[$webform->nid] = $webform->title;
     }
+
+    // Set e-mail settings.
+    $form['spwebformsync_email_settings'] = array(
+      '#type' => 'fieldset',
+      '#title' => 'E-mail instellingen',
+    );
+    $form['spwebformsync_email_settings']['spwebformsync_merge_contact_email_address'] = array(
+      '#type' => 'textfield',
+      '#title' => 'Contacten die handmatig gemerged moeten worden sturen naar:',
+      '#default_value' => variable_get('spwebformsync_merge_contact_email_address', ''),
+    );
+
     // Add existing form submissions.
     $form['spwebformsync_add_submissions'] = array(
       '#type' => 'fieldset',
@@ -507,6 +519,14 @@ function spwebformsync_settings_form($form, &$form_state) {
   return system_settings_form($form);
 }
 
+function spwebformsync_settings_form_validate($form, &$form_state) {
+  $values = $form_state['values'];
+  if (!empty($values['spwebformsync_merge_contact_email_address'])) {
+    if (! valid_email_address($values['spwebformsync_merge_contact_email_address'])) {
+      form_set_error('spwebformsync_merge_contact_email_address', 'Vul een geldig e-mailadres in!');
+    }
+  }
+}
 function spwebformsync_form_sync($form, &$form_state) {
   $processed = spwebformsync_sync();
   if (!empty($processed)) {
