@@ -682,6 +682,7 @@ function spwebformsync_split_house_number($house_number) {
 
 function spwebformsync_split_name($name) {
   $name = trim($name);
+
   // If name contains only lowercase words, make all first characters uppercase.
   $spaceless = str_replace(' ', '', $name);
   if (ctype_lower($spaceless)) {
@@ -689,8 +690,12 @@ function spwebformsync_split_name($name) {
   }
   // Replace terms.
   $replace = array(
-    'vd.' => 'van de',
-    'vd' => 'van de',
+    '.te ' => '. te ',
+    '.de ' => '. de ',
+    '.van ' => '. van ',
+    ' v. ' => ' van ',
+    ' vd. ' => ' van de ',
+    ' vd ' => ' van de ',
   );
   foreach ($replace as $orig => $new) {
     if (strpos($name, ' '.$orig.' ') !== FALSE) {
