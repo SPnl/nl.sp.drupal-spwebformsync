@@ -485,6 +485,11 @@ function spwebformsync_settings_form($form, &$form_state) {
       '#title' => 'Contacten die handmatig gemerged moeten worden sturen naar:',
       '#default_value' => variable_get('spwebformsync_merge_contact_email_address', ''),
     );
+    $form['spwebformsync_email_settings']['spwebformsync_check_name_email_address'] = array(
+      '#type' => 'textfield',
+      '#title' => 'Contacten waarvan de naam handmatig nagekeken moeten worden sturen naar:',
+      '#default_value' => variable_get('spwebformsync_check_name_email_address', ''),
+    );
 
     // Add existing form submissions.
     $form['spwebformsync_add_submissions'] = array(

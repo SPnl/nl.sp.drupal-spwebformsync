@@ -140,8 +140,17 @@ function spwebformsync_mail($key, &$message, $params) {
   case 'manual_merge':
     $message['subject'] = 'Handmatig mergen CiviCRM contact';
     $message['body'][] = 'Beste,';
-    $message['body'][] = 'het volgende contact is via een webformulier synchronizatie toegevoegd in CiviCRM. Dit contact moet handmatig worden samengevoegd met reeds bestaande contacten.';
+    $message['body'][] = 'het volgende contact is via een webformulier synchronizatie toegevoegd in CiviCRM. Dit contact moet handmatig worden samengevoegd met reeds bestaande contacten. Komt dit bericht onnodig voor, en had het contact automatisch samengevoegd kunnen worden, laat het dan weten aan het webteam.';
     $message['body'][] = 'CiviCRM contact id: ' . $params['contact_id'];
+    $message['body'][] = 'Thx, het webteam';
+    $message['body'][] = '(Dit is een automatisch gegenereerd bericht).';
+    break;
+  case 'check_name':
+    $message['subject'] = 'Handmatig controleren naam CiviCRM contact';
+    $message['body'][] = 'Beste,';
+    $message['body'][] = 'het volgende contact is via een webformulier synchronizatie toegevoegd in CiviCRM. De naam van dit contact moet helaas handmatig worden gecorrigeerd. Komt dit te vaak voor, of onnodig, laat het dan aan het webteam weten.';
+    $message['body'][] = 'CiviCRM contact id: ' . $params['contact_id'];
+    $message['body'][] = 'Te corrigeren naam: ' . $params['name'];
     $message['body'][] = 'Thx, het webteam';
     $message['body'][] = '(Dit is een automatisch gegenereerd bericht).';
     break;

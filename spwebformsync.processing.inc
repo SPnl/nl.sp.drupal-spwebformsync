@@ -312,6 +312,7 @@ function spwebformsync_add_contact($data, $sync_data, $submission) {
   // Make sure last name is set, if data is available.
   if (empty($data['first_name']) && empty($data['last_name']) && !empty($data['name'])) {
     $params['last_name'] = $data['name'];
+    $check_name = TRUE; // Create contact first for id.
   }
   unset($sync_items['name']);
   $create_contact_results = $spcivi->api('Contact', 'create', $params);
@@ -319,6 +320,18 @@ function spwebformsync_add_contact($data, $sync_data, $submission) {
     $contact_id = $create_contact_results['id'];
     drupal_set_message('Contact in CiviCRM toegevoegd: ' . $contact_id);
     watchdog('spwebformsync', 'Contact in CiviCRM toegevoegd: ' . $contact_id);
+
+    // If no split name, send mail for manually checking name.
+    if (!empty($check_name)) {
+      $check_name_email = variable_get('spwebformsync_check_name_email_address', '');
+      if (!empty($check_name_email)) {
+        $params = array(
+          'contact_id' => $contact_id,
+          'name' => $data['name'],
+        );
+        $message = drupal_mail('spwebformsync', 'check_name', $check_name_email, language_default(), $params, 'webmaster@sp.nl');
+      }
+    }
 
     // If available, add phone.
     if (!empty($data['telephone'])) {
