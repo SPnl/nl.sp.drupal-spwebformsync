@@ -689,10 +689,11 @@ function spwebformsync_split_name($name) {
   }
   // Replace terms.
   $replace = array(
+    'vd.' => 'van de',
     'vd' => 'van de',
   );
   foreach ($replace as $orig => $new) {
-    if (strpos(' '.$orig.' ', $name) !== FALSE) {
+    if (strpos($name, ' '.$orig.' ') !== FALSE) {
       $name = str_replace($orig, $new, $name);
     }
   }
