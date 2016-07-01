@@ -73,7 +73,8 @@ function spwebformsync_get_civi_groups($sync = TRUE) {
           if (!empty($groups_results['values'])) {
             foreach ($groups_results['values'] as $value) {
               if (
-                !empty($value['group_type']) &&
+                empty($value['group_type']) ||
+                (array_key_exists(0, $value['group_type']) && empty($value['group_type'][0])) ||
                 in_array('2', $value['group_type'])
               ) {
               $groups[$value['id']] = $value['title'];
