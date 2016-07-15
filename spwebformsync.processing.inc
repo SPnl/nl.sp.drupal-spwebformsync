@@ -681,18 +681,11 @@ function spwebformsync_split_house_number($house_number) {
 }
 
 function spwebformsync_split_name($name) {
+  $matches = array();
   $name = trim($name);
 
-  // If name contains only lowercase words, make all first characters uppercase.
-  $spaceless = str_replace(' ', '', $name);
-  if (ctype_lower($spaceless)) {
-    $name = ucwords($name);
-  }
   // Replace terms.
   $replace = array(
-    '.te ' => '. te ',
-    '.de ' => '. de ',
-    '.van ' => '. van ',
     ' v. ' => ' van ',
     ' vd. ' => ' van de ',
     ' vd ' => ' van de ',
@@ -702,25 +695,41 @@ function spwebformsync_split_name($name) {
       $name = str_replace($orig, $new, $name);
     }
   }
-  // Split name on middle_name.
+
+  // Regexes for title and middle names.
+  $titles_regex = 'Mr|mr|Mevr|mevr|Dhr|dhr|Ir|ir|Ing|ing|Bc|bc|Ms|ms|Drs|drs|Dr|dr';
+
   $middle_names_array = spwebformsync_middle_names(); 
   $middle_names_regex = implode('|', $middle_names_array);
 
-  $regex = "@^((?'first_name'(\b([A-ZÀÈÌÒÙÁÉÍÓÚÝÂÊÎÔÛÃÑÕÄËÏÖÜŸÇÅ.]+|[A-ZÀÈÌÒÙÁÉÍÓÚÝÂÊÎÔÛÃÑÕÄËÏÖÜŸÇÅ][a-zàèìòùáéíóúýâêîôûãñõäëïöü¡¿çãñõ'\-]+)\s*)+?)\s)(?'middle_name'(\b(" . $middle_names_regex . ")\b\s*)+)\s+(?'last_name'(\b[A-ZÀÈÌÒÙÁÉÍÓÚÝÂÊÎÔÛÃÑÕÄËÏÖÜŸÇÅ][a-zàèìòùáéíóúýâêîôûãñõäëïöü¡¿çãñõ'-]+\b).*)$@";
-  if (preg_match($regex, $name, $matches)) {
-    return $matches;
+  // Split name on middle_name.
+  $regex = "@^(?'title'(\b(" . $titles_regex . ")\b\.?\s)?)(?'first_name'(([A-ZÀÈÌÒÙÁÉÍÓÚÝÂÊÎÔÛÃÑÕÄËÏÖÜŸÇÅa-zàèìòùáéíóúýâêîôûãñõäëïöü¡¿çãñõ'\-\.]+)\s*)+?)(?'middle_name'(\b(" . $middle_names_regex . ")\b\s*))(?'last_name'(\b[A-ZÀÈÌÒÙÁÉÍÓÚÝÂÊÎÔÛÃÑÕÄËÏÖÜŸÇÅa-zàèìòùáéíóúýâêîôûãñõäëïöü¡¿çãñõ'][a-zàèìòùáéíóúýâêîôûãñõäëïöü¡¿çãñõ'\-]+\b\s?)+)$@";
+  $result = preg_match($regex, $name, $matches);
+  if (!preg_match($regex, $name, $matches)) {
+    // Split name without middle_name in first name and last name(s).
+    $regex = "@^(?'title'(\b(" . $titles_regex . ")\b\.?\s)?)(?'first_name'(([A-ZÀÈÌÒÙÁÉÍÓÚÝÂÊÎÔÛÃÑÕÄËÏÖÜŸÇÅa-zàèìòùáéíóúýâêîôûãñõäëïöü¡¿çãñõ'\-\.]+)\s*)+?)(?'last_name'(\b[A-ZÀÈÌÒÙÁÉÍÓÚÝÂÊÎÔÛÃÑÕÄËÏÖÜŸÇÅa-zàèìòùáéíóúýâêîôûãñõäëïöü¡¿çãñõ'][a-zàèìòùáéíóúýâêîôûãñõäëïöü¡¿çãñõ'\-]+\b\s?)+)$@";
+    $result = preg_match($regex, $name, $matches);
+    if (!preg_match($regex, $name, $matches)) {
+      // Check if only first name.
+      $regex = "@^(?'first_name'([A-ZÀÈÌÒÙÁÉÍÓÚÝÂÊÎÔÛÃÑÕÄËÏÖÜŸÇÅa-zàèìòùáéíóúýâêîôûãñõäëïöü¡¿çãñõ'][a-zàèìòùáéíóúýâêîôûãñõäëïöü¡¿çãñõ'\-]+))$@";
+      $result = preg_match($regex, $name, $matches);
+      if (!preg_match($regex, $name, $matches)) {
+        // No match found.
+        return FALSE;
+      }
+    }
   }
-  // Split name without middle_name in first name and last name(s).
-  $regex = "@^(?'first_name'(\b([A-ZÀÈÌÒÙÁÉÍÓÚÝÂÊÎÔÛÃÑÕÄËÏÖÜŸÇÅ.]+|[A-ZÀÈÌÒÙÁÉÍÓÚÝÂÊÎÔÛÃÑÕÄËÏÖÜŸÇÅ][a-zàèìòùáéíóúýâêîôûãñõäëïöü¡¿çãñõ'\-]+)))\s+(?'last_name'(\b[A-ZÀÈÌÒÙÁÉÍÓÚÝÂÊÎÔÛÃÑÕÄËÏÖÜŸÇÅ][a-zàèìòùáéíóúýâêîôûãñõäëïöü¡¿çãñõ'-]+\b\s*)+)$@";
-  if (preg_match($regex, $name, $matches)) {
-    return $matches;
+  // Set first character uppercase.
+  $parts = array(
+    'first_name',
+    'last_name',
+  );
+  foreach ($parts as $part) {
+    if (!empty($matches[$part])) {
+      $matches[$part] = ucfirst($matches[$part]);
+    }
   }
-  // Check if only first name.
-  $regex = "@^(?'first_name'(\b[A-ZÀÈÌÒÙÁÉÍÓÚÝÂÊÎÔÛÃÑÕÄËÏÖÜŸÇÅ.]+|[A-ZÀÈÌÒÙÁÉÍÓÚÝÂÊÎÔÛÃÑÕÄËÏÖÜŸÇÅ.][a-zàèìòùáéíóúýâêîôûãñõäëïöü¡¿çãñõ'\-]+\b))$@";
-  if (preg_match($regex, $name, $matches)) {
-    return $matches;
-  }
-  return FALSE;
+  return $matches;
 }
 
 function _spcf_check_result($result, $dataname, $action, $data = NULL, $submission = NULL) {
