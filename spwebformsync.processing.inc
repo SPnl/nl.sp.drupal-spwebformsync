@@ -709,6 +709,7 @@ function spwebformsync_split_name($name) {
     ' v. ' => ' van ',
     ' vd. ' => ' van de ',
     ' vd ' => ' van de ',
+    ' v/d ' => ' van de ',
   );
   foreach ($replace as $orig => $new) {
     if (strpos($name, ' '.$orig.' ') !== FALSE) {
