@@ -163,11 +163,11 @@ function spwebformsync_find_same_contacts($data, $submission) {
     $params = array(
       'option.limit' => 1,
       'contact_id' => $contact_id,
+      'contact_is_deleted' => 0,
     );
     $contact_results = $spcivi->api('Contact', 'get', $params);
     if (_spcf_check_result($contact_results, 'een contact', 'get', $params, $submission)) {
       if (!empty($contact_results['values'])) {
-        // Check if first name and last name are identical.
         $same_contacts[$contact_id] = $contact_id;
         return $same_contacts;
       }
@@ -209,6 +209,7 @@ function spwebformsync_find_same_contacts($data, $submission) {
       // Get contact information.
       $params = array(
         'contact_id' => $phone_contact_id,
+        'contact_is_deleted' => 0,
       );
       $contact_results = $spcivi->api('Contact', 'get', $params);
       if (_spcf_check_result($contact_results, 'een contact', 'get', $params, $submission)) {
@@ -225,7 +226,7 @@ function spwebformsync_find_same_contacts($data, $submission) {
               strpos(strtolower($contact['display_name']), strtolower($data['first_name'])) !== FALSE
             )
           ) {
-          $same_contacts[$phone_contact_id] = $phone_contact_id;
+            $same_contacts[$phone_contact_id] = $phone_contact_id;
           }
         }
       }
@@ -255,6 +256,7 @@ function spwebformsync_find_same_contacts($data, $submission) {
           // Get contact information.
           $params = array(
             'contact_id' => $contact_id,
+            'contact_is_deleted' => 0,
           );
           $contact_results = $spcivi->api('Contact', 'get', $params);
           if (_spcf_check_result($contact_results, 'een contact', 'get', $params, $submission)) {
@@ -463,7 +465,7 @@ function spwebformsync_merge_contacts($data, $sync_data, $same_contacts, $submis
         $get_emails_result = $spcivi->api('Email', 'get', $params);
         if(!_spcf_check_result($get_emails_result, 'een e-mailadres', 'get', $params, $submission)) {
           return FALSE;
-        }
+    }
         if (!empty($get_emails_result) && empty($get_emails_result['values'])) {
           if (empty($contact['email'])) {
             $primary = 1;
@@ -535,7 +537,7 @@ function spwebformsync_merge_contacts($data, $sync_data, $same_contacts, $submis
       }
 
       // Merge address data if no address with same house number or postal code exists.
-      if (!empty($data['house_number']) || !empty($data['postal_code'])) {
+      if (!empty($data['house_number']) || !empty($data['postal_code']) || (!empty($data['street_and_number']) && !empty($data['locality']))) {
         if (!empty($data['house_number'])) {
           // Check if address with same house number exists.
           $params = array(
@@ -558,9 +560,18 @@ function spwebformsync_merge_contacts($data, $sync_data, $same_contacts, $submis
             return FALSE;
           }
         }
+        if (!empty($data['street_and_number']) && !empty($data['locality']) && empty($contact['address_id'])) {
+          // Add address.
+          $add_address = TRUE;
+        }
+        else {
+          $add_address = FALSE;
+        }
         if (
+          (
             empty($get_street_number_address_result['values']) &&
             empty($get_postal_code_address_result['values'])
+          ) || $add_address
         ) {
           // Add extra address.
           if (empty($contact['address_id'])) {
