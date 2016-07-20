@@ -491,6 +491,12 @@ function spwebformsync_settings_form($form, &$form_state) {
       '#default_value' => variable_get('spwebformsync_check_name_email_address', ''),
     );
 
+    $form['spwebformsync_email_settings']['spwebformsync_check_address_email_address'] = array(
+      '#type' => 'textfield',
+      '#title' => 'Contacten waarvan het adres nagekeken moeten worden sturen naar:',
+      '#default_value' => variable_get('spwebformsync_check_address_email_address', ''),
+    );
+
     // Add existing form submissions.
     $form['spwebformsync_add_submissions'] = array(
       '#type' => 'fieldset',

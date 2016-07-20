@@ -70,6 +70,7 @@ function spwebformsync_parse_submission($submission, $sync_data) {
       }
     }
   }
+
   return $data;
 }
 
@@ -382,6 +383,11 @@ function spwebformsync_add_contact($data, $sync_data, $submission) {
       if (!_spcf_check_result($create_address_results, 'een adres', 'create', $params, $submission)) {
         return FALSE;
       }
+      else {
+        if (!empty($data['street_and_number'])) {
+          spwebformsync_check_address_manually($data['street_and_number'], $contact_id);
+        }
+      }
     }
     // If available set unverified tag.
     $tag_id = variable_get('spwebformsync_unverified_tag', FALSE);
@@ -607,6 +613,9 @@ function spwebformsync_merge_contacts($data, $sync_data, $same_contacts, $submis
             $create_address_results = $spcivi->api('Address', 'create', $params);
             if(_spcf_check_result($create_address_results, 'een adres', 'create', $params, $submission)) {
               $merged_data = TRUE;
+              if (!empty($data['street_and_number'])) {
+                spwebformsync_check_address_manually($data['street_and_number'], $contact_id);
+              }
             }
             else {
               return FALSE;
@@ -878,4 +887,34 @@ function spwebformsync_sync() {
     }
   }
   return $processed;
+}
+
+function spwebformsync_check_address_manually($street_and_number, $contact_id) {
+  // Check if there is a house number addition in a street_address, if so, send mail for manual correction.
+  if (!empty($street_and_number)) {
+    preg_match('/\d+/', $street_and_number, $m, PREG_OFFSET_CAPTURE);
+    if (sizeof($m)) {
+      $addition_pos = $m[0][1] + strlen($m[0][1]);
+      if ($addition_pos + 1 < strlen($street_and_number)) {
+        // Addition found, send mail.
+        $check_address_email = variable_get('spwebformsync_check_address_email_address', '');
+        if (!empty($check_address_email)) {
+          // Send mail for manually merging.
+          $params = array(
+            'contact_id' => $contact_id,
+            'street_and_number' => $street_and_number,
+          );
+          $message = drupal_mail('spwebformsync', 'check_address', $check_address_email, language_default(), $params, 'webmaster@sp.nl');
+          if (!empty($message['result'])) { 
+            watchdog('spwebformsync', 'Contact controle huisnummer toevoeging, mail verzonden.');
+            drupal_set_message('Contact controle huisnummer toevoeging, mail verzonden.');
+          }
+          else {
+            watchdog('spwebformsync', 'Contact controle huisnummer toevoeging, geen mail verzonden verzonden (fout opgetreden).');
+            drupal_set_message('Contact controle huisnummer toevoeging, geen mail verzonden (fout opgetreden).');
+          }
+        }
+      }
+    }
+  }
 }
