@@ -703,6 +703,15 @@ function spwebformsync_split_house_number($house_number) {
 function spwebformsync_split_name($name) {
   $matches = array();
   $name = trim($name);
+  $name = trim($name, '.,');
+
+  // Remove comma from name.
+  $comma_pos = strpos($name, ',');
+  if ($comma_pos !== FALSE) {
+    $first_half = trim(substr($name, 0, $comma_pos));
+    $last_half = trim(substr($name, $comma_pos + 1));
+    $name = $last_half . ' ' . $first_half;
+  }
 
   // Replace terms.
   $replace = array(
