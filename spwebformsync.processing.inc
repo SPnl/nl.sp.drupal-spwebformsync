@@ -904,8 +904,8 @@ function spwebformsync_check_address_manually($street_and_number, $contact_id) {
   if (!empty($street_and_number)) {
     preg_match('/\d+/', $street_and_number, $m, PREG_OFFSET_CAPTURE);
     if (sizeof($m)) {
-      $addition_pos = $m[0][1] + strlen($m[0][1]);
-      if ($addition_pos + 1 < strlen($street_and_number)) {
+      $addition_pos = $m[0][1] + strlen($m[0][0]);
+      if ($addition_pos < strlen($street_and_number)) {
         // Addition found, send mail.
         $check_address_email = variable_get('spwebformsync_check_address_email_address', '');
         if (!empty($check_address_email)) {
