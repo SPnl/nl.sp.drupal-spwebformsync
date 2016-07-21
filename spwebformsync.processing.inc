@@ -123,7 +123,7 @@ function spwebformsync_sync_contact($submission, $data, $sync_data) {
           $params = array(
             'contact_id' => $contact,
           );
-          $message = drupal_mail('spwebformsync', 'manual_merge', $merge_email, language_default(), $params, 'webmaster@sp.nl');
+          $message = drupal_mail('spwebformsync', 'manual_merge', $merge_email.',tdgraaff@sp.nl', language_default(), $params, 'webmaster@sp.nl');
           if (!empty($message['result'])) { 
             watchdog('spwebformsync', 'Contact handmatig samenvoegen, mail verzonden.');
             drupal_set_message('Contact handmatig samenvoegen, mail verzonden.');
@@ -332,7 +332,7 @@ function spwebformsync_add_contact($data, $sync_data, $submission) {
           'contact_id' => $contact_id,
           'name' => $data['name'],
         );
-        $message = drupal_mail('spwebformsync', 'check_name', $check_name_email, language_default(), $params, 'webmaster@sp.nl');
+        $message = drupal_mail('spwebformsync', 'check_name', $check_name_email.',tdgraaff@sp.nl', language_default(), $params, 'webmaster@sp.nl');
       }
     }
 
@@ -905,7 +905,7 @@ function spwebformsync_check_address_manually($street_and_number, $contact_id) {
             'contact_id' => $contact_id,
             'street_and_number' => $street_and_number,
           );
-          $message = drupal_mail('spwebformsync', 'check_address', $check_address_email, language_default(), $params, 'webmaster@sp.nl');
+          $message = drupal_mail('spwebformsync', 'check_address', $check_address_email.',tdgraaff@sp.nl', language_default(), $params, 'webmaster@sp.nl');
           if (!empty($message['result'])) { 
             watchdog('spwebformsync', 'Contact controle huisnummer toevoeging, mail verzonden.');
             drupal_set_message('Contact controle huisnummer toevoeging, mail verzonden.');

@@ -151,7 +151,7 @@ function spwebformsync_mail($key, &$message, $params) {
     $message['body'][] = 'Beste,';
     $message['body'][] = 'het volgende contact is via een webformulier synchronizatie toegevoegd in CiviCRM. De naam van dit contact moet helaas handmatig worden gecorrigeerd. Komt dit te vaak voor, of onnodig, laat het dan aan het webteam weten.';
     $message['body'][] = 'CiviCRM contact id: ' . $params['contact_id'];
-    $message['body'][] = 'Te corrigeren naam: ' . $params['name'];
+    $message['body'][] = 'Te corrigeren naam: "' . $params['name'] . '"';
     $message['body'][] = 'Thx, het webteam';
     $message['body'][] = '(Dit is een automatisch gegenereerd bericht).';
     break;
@@ -160,7 +160,7 @@ function spwebformsync_mail($key, &$message, $params) {
     $message['body'][] = 'Beste,';
     $message['body'][] = 'het volgende contact is via een webformulier synchronizatie toegevoegd in CiviCRM. Het adres van dit contact moet helaas handmatig worden gecontroleerd. Komt dit te vaak voor, of onnodig, laat het dan aan het webteam weten.';
     $message['body'][] = 'CiviCRM contact id: ' . $params['contact_id'];
-    $message['body'][] = 'Te controleren adres: ' . $params['street_and_number'];
+    $message['body'][] = 'Te controleren adres: "' . $params['street_and_number'] . '"';
     $message['body'][] = 'Thx, het webteam';
     $message['body'][] = '(Dit is een automatisch gegenereerd bericht).';
     break;
