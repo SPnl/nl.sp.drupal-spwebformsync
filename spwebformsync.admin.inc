@@ -53,7 +53,7 @@ function spwebformsync_admin_form($form, &$form_state, $form_id = NULL) {
 
     $allowed_types = variable_get('spwebformsync_allowed_component_types', array());
  
-    $data_names = spwebformsync_get_data_names();
+    $data_names = spcivipush_get_data_names();
     $webform_components = spwebformsync_get_webform_allowed_components($webform_default, $allowed_types);
     if (!empty($webform_components)) {
 
@@ -452,50 +452,11 @@ function spwebformsync_settings_form($form, &$form_state) {
     '#default_value' => variable_get('spwebformsync_allowed_component_types', array()),
   );
 
-  // Civicrm settings.
-  $form['spwebformsync_civicrm_settings'] = array(
-    '#type' => 'fieldset',
-    '#title' => 'CiviCRM synchronisatie instellingen',
-  );
-  $tags = spwebformsync_get_civi_tags();
-  if (empty(variable_get('spwebformsync_unverified_tag', FALSE)) && $id = array_search('Ongecontroleerd', $tags)) {
-    variable_set('spwebformsync_unverified_tag', $id);
-  }
-  $form['spwebformsync_civicrm_settings']['spwebformsync_unverified_tag'] = array(
-    '#type' => 'select',
-    '#title' => 'Kies de tag die moet worden toegevoegd aan contacten die handmatig moeten worden gecontroleerd.',
-    '#options' => $tags,
-    '#empty_option' => '- Geen -',
-    '#default_value' => variable_get('spwebformsync_unverified_tag', array()),
-  );
-
   $webforms = spwebformsync_get_webforms();
   if (!empty($webforms)) {
     foreach ($webforms as $webform) {
       $webform_select_options[$webform->nid] = $webform->title;
     }
-
-    // Set e-mail settings.
-    $form['spwebformsync_email_settings'] = array(
-      '#type' => 'fieldset',
-      '#title' => 'E-mail instellingen',
-    );
-    $form['spwebformsync_email_settings']['spwebformsync_merge_contact_email_address'] = array(
-      '#type' => 'textfield',
-      '#title' => 'Contacten die handmatig gemerged moeten worden sturen naar:',
-      '#default_value' => variable_get('spwebformsync_merge_contact_email_address', ''),
-    );
-    $form['spwebformsync_email_settings']['spwebformsync_check_name_email_address'] = array(
-      '#type' => 'textfield',
-      '#title' => 'Contacten waarvan de naam handmatig nagekeken moeten worden sturen naar:',
-      '#default_value' => variable_get('spwebformsync_check_name_email_address', ''),
-    );
-
-    $form['spwebformsync_email_settings']['spwebformsync_check_address_email_address'] = array(
-      '#type' => 'textfield',
-      '#title' => 'Contacten waarvan het adres nagekeken moeten worden sturen naar:',
-      '#default_value' => variable_get('spwebformsync_check_address_email_address', ''),
-    );
 
     // Add existing form submissions.
     $form['spwebformsync_add_submissions'] = array(
@@ -532,12 +493,8 @@ function spwebformsync_settings_form($form, &$form_state) {
 
 function spwebformsync_settings_form_validate($form, &$form_state) {
   $values = $form_state['values'];
-  if (!empty($values['spwebformsync_merge_contact_email_address'])) {
-    if (! valid_email_address($values['spwebformsync_merge_contact_email_address'])) {
-      form_set_error('spwebformsync_merge_contact_email_address', 'Vul een geldig e-mailadres in!');
-    }
-  }
 }
+
 function spwebformsync_form_sync($form, &$form_state) {
   $processed = spwebformsync_sync();
   if (!empty($processed)) {
@@ -596,7 +553,7 @@ function spwebformsync_group_autocomplete($string) {
 function spwebformsync_overview() {
   $sync_data = variable_get('spwebformsync_sync_data', array());
   if (!empty($sync_data)) {
-    $data_names = spwebformsync_get_data_names();
+    $data_names = spcivipush_get_data_names();
     $markup = '<table><tr><th>Webformulier</th><th>Webformulier &#8594; Civicrm</th><th>Vaste groepen</th><th>Variabele groepselecties</th><th>Cron wachtrij</th><th></th></tr>';
     foreach ($sync_data as $data) {
       $form = node_load($data['webform']);
