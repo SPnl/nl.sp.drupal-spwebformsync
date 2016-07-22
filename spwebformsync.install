@@ -82,18 +82,21 @@ function spwebformsync_migrate_states() {
   variable_del('spwebformsync_postphoned_submission_syncs');
 }
 
+/**
+ * Move CiviCRM synchronization code to external module.
+ */
 function spwebformsync_update_7101() {
   // Move variables to spcivipush module.
   $variables = array(
     '_civi_tags',
     '_unverified_tag',
     '_merge_contact_email_address',
-    '_check_name__email_address',
+    '_check_name_email_address',
     '_check_address_email_address',
   );
   foreach ($variables as $variable) {
     $webform_value = variable_get('spwebformsync' . $variable, '');
-    if (!empty($webform_value) {
+    if (!empty($webform_value)) {
       variable_set('spcivipush' . $variable, $webform_value);
     }
     variable_del('spwebformsync' . $variable);
