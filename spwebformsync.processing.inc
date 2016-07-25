@@ -15,7 +15,7 @@ function spwebformsync_process_submission($submission) {
     // Create contact source line.
     $webform = node_load($sync_data['webform']);
     $site_name = variable_get('site_name');
-    $source = 'SP webformsync: ' . $webform->title . ', id: ' . $submission->sid .' (' . $site_name . ')';
+    $source = 'SP webformsync: ' . $webform->title . ', sid: ' . $submission->sid .' (' . $site_name . ')';
 
     // Parse data.
     $data = spwebformsync_parse_submission($submission, $sync_data);
