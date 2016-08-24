@@ -57,8 +57,7 @@ function spwebformsync_admin_form($form, &$form_state, $form_id = NULL) {
     $webform_components = spwebformsync_get_webform_allowed_components($webform_default, $allowed_types);
     if (!empty($webform_components)) {
 
-      $webform = node_load($webform_default);
-      $webform_component_select_options = webform_component_list($webform, $webform_components, FALSE);
+      $webform_component_select_options = spwebformsync_get_components_list($webform_components);
 
       // Add select field components.
       // ----------------------------------------------------------
@@ -197,7 +196,7 @@ function spwebformsync_admin_form($form, &$form_state, $form_id = NULL) {
         }
       }
       if (!empty($webform_components)) {
-        $webform_component_select_options = webform_component_list($webform, $webform_components, FALSE);
+        $webform_component_select_options = spwebformsync_get_components_list($webform_components);
         $form['variable_group_select']['webform_component'] = array(
           '#type' => 'select',
           '#title' => 'Formulier veld',
@@ -557,12 +556,16 @@ function spwebformsync_overview() {
     $markup = '<table><tr><th>Webformulier</th><th>Webformulier &#8594; Civicrm</th><th>Vaste groepen</th><th>Variabele groepselecties</th><th>Cron wachtrij</th><th></th></tr>';
     foreach ($sync_data as $data) {
       $form = node_load($data['webform']);
+      $components = $form->webform['components'];
+      $components_list = spwebformsync_get_components_list($components);
       $postphoned_number = spwebformsync_unprocessed_count($data['webform']);
       $markup .= '<tr><td><a href="/node/'. $form->nid . '">'.$form->title.'</a></td>';
       $markup .= '<td><table>';
       foreach ($data_names as $key => $name) {
         if (!empty($data[$key . '_component'])) {
-          $markup .= '<tr><td>' . $form->webform['components'][$data[$key . '_component']]['name'] . '</td><td>&nbsp;&#8594;&nbsp;</td><td>' . ucfirst($name) . '</td></tr>';
+          $component_id = $data[$key . '_component'];
+          $component_name = !empty($components_list[$component_id]) ? $components_list[$component_id] : $components[$data[$key . '_component']]['name'];
+          $markup .= '<tr><td>' . $component_name . '</td><td>&nbsp;&#8594;&nbsp;</td><td>' . ucfirst($name) . '</td></tr>';
         }
       }
       $markup .= '</table></td><td>';

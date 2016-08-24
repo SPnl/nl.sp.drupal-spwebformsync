@@ -43,10 +43,23 @@ function spwebformsync_parse_submission($submission, $sync_data) {
   $data = array();
   $sync_items = spcivipush_get_data_names(); 
   foreach ($sync_items as $key => $name) {
-    if (isset($sync_data[$key . '_component'])) {
-      if (!empty($submission->data[$sync_data[$key . '_component']][0])) {
-        $var = $submission->data[$sync_data[$key . '_component']][0];
+    if (!empty($sync_data[$key . '_component'])) {
+      $component_id = $sync_data[$key . '_component'];
+      $parts = explode('|', $component_id);
+      if (!empty($parts[1])) {
+        if (!empty($submission->data[$parts[0]][$parts[1]])) {
+          $var = $submission->data[$parts[0]][$parts[1]];
+        }
+      }
+      else {
+        if (!empty($submission->data[$component_id][0])) {
+          $var = $submission->data[$component_id][0];
+        }
+      }
+      if (!empty($var)) {
         $data[$key] = $var;
+      }
+      else {
       }
     }
   }

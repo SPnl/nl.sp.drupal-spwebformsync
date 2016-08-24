@@ -121,3 +121,21 @@ function spwebformsync_parse_group_form_select_value($group_raw) {
   }
   return $group;
 }
+
+function spwebformsync_get_components_list($webform_components) {
+  $list = array();
+  foreach ($webform_components as $component_id => $component) {
+    if ($component['type'] === 'sp_address_auto') {
+      // Replace with fields.
+      $elements = webform_component_invoke('sp_address_auto', 'render', $component);
+      foreach ($elements as $element_id => $element) {
+        if (strpos($element_id, '#') === 0) continue;
+        $list[$component_id . '|' . $element_id] = $component['name'] . ': ' . $element['#title'];
+      }
+    }
+    else {
+      $list[$component_id] = $component['name'];
+    }
+  }
+  return $list;
+}
