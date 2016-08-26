@@ -57,6 +57,7 @@ function spwebformsync_admin_form($form, &$form_state, $form_id = NULL) {
     $webform_components = spwebformsync_get_webform_allowed_components($webform_default, $allowed_types);
     if (!empty($webform_components)) {
 
+      $webform = node_load($webform_default);
       $webform_component_select_options = spwebformsync_get_components_list($webform_components);
 
       // Add select field components.
