@@ -43,6 +43,7 @@ function spwebformsync_parse_submission($submission, $sync_data) {
   $data = array();
   $sync_items = spcivipush_get_data_names(); 
   foreach ($sync_items as $key => $name) {
+    $var = '';
     if (!empty($sync_data[$key . '_component'])) {
       $component_id = $sync_data[$key . '_component'];
       $parts = explode('|', $component_id);
