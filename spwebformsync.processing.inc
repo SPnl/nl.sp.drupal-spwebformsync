@@ -267,7 +267,7 @@ function spwebformsync_check_address_manually($street_and_number, $contact_id) {
 
 function spwebformsync_send_mails($contact_id, $sync_data, $submission) {
   if (!empty($sync_data)) {
-    if (!empty($sync_data['fixed_mail_text']['value']) || !empty($sync_data['variable_mail']['value'])) {
+    if (!empty($sync_data['fixed_mail_text']['value']) || !empty($sync_data['variable_mail'])) {
       // Get contact data from CiviCRM.
       $spcivi = \SPCivi::getInstance();
       $params = array(
@@ -279,7 +279,7 @@ function spwebformsync_send_mails($contact_id, $sync_data, $submission) {
           $contact_data = array_pop($get_contact_results['values']); 
 
           // Send fixed mail.
-          if (!empty($sync_data['fixed_mail_text'])) {
+          if (!empty($sync_data['fixed_mail_text']['value'])) {
             $text_raw = $sync_data['fixed_mail_text']['value'];
             $filter_format = $sync_data['fixed_mail_text']['format'];
             $text = check_markup($text_raw, $filter_format);
@@ -292,7 +292,7 @@ function spwebformsync_send_mails($contact_id, $sync_data, $submission) {
             foreach ($sync_data['variable_mail'] as $component_id => $to_mail_data) {
               if (!empty($submission->data[$component_id])) {
                 foreach ($submission->data[$component_id] as $answer_key) {
-                  if (!empty($to_mail_data['values'][$answer_key])) {
+                  if (!empty($to_mail_data['values'][$answer_key]['mail']['value'])) {
                     $text_raw = $to_mail_data['values'][$answer_key]['mail']['value'];
                     $filter_format = $to_mail_data['values'][$answer_key]['mail']['format'];
                     $text = check_markup($text_raw, $filter_format);
@@ -318,6 +318,7 @@ function spwebformsync_send_mail($contact_data, $subject, $text) {
       'text' => $text,
     );
     foreach ($raw_texts as $text_key => $raw_text) {
+      $matches = array();
       // Replace contact data in raw text.
       if (preg_match_all('/\[([^]\s]+)\]/', $raw_text, $matches)) {
         foreach ($matches[1] as $key => $pattern_match) {
