@@ -274,6 +274,7 @@ function spwebformsync_send_mails($contact_id, $sync_data, $submission) {
         'id' => $contact_id,
       );
       $get_contact_results = $spcivi->api('Contact', 'get', $params);
+      $debug_info = 'Getting contact to send mail. Submission id: ' . $submission->sid;
       if (_spcivipush_check_result($get_contact_results, 'contacten', 'get', $params, $debug_info)) {
         if (!empty($get_contact_results['values'])) {
           $contact_data = array_pop($get_contact_results['values']); 
