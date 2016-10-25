@@ -252,6 +252,20 @@ function spwebformsync_admin_form($form, &$form_state, $form_id = NULL) {
         '#default_value' => isset($default['value']) ? $default['value'] : '',
       );
 
+      $form['fixed_mail']['fixed_mail_emailaddress'] = array(
+        '#type' => 'textfield',
+        '#title' => 'E-mailadres',
+      );
+      $form['fixed_mail']['fixed_mail_send_test'] = array(
+        '#type' => 'button',
+        '#value' => 'Verstuur een testmail',
+        '#name' => 'fixed_mail_send_test',
+        '#ajax' => array(
+          'wrapper' => 'spwebformsync_ajax_form',
+          'callback' => 'spwebformsync_ajax_form_callback',
+        ),
+      );
+
       // Variable mails.
       // --------------------------------------------------------------------
       $form['variable_mail'] = array(
@@ -304,11 +318,15 @@ function spwebformsync_admin_form($form, &$form_state, $form_id = NULL) {
               '#format' => isset($default['format']) ? $default['format'] : NULL,
               '#default_value' => isset($default['value']) ? $default['value'] : '',
             );
-            $form['variable_mail']['mail_component_'.$component_key]['mail_del_component_'.$component_key] = array(
+            $form['variable_mail']['mail_component_'.$component_key]['mailfieldset_component_'.$component_key.'_value_'.$key]['mail_testmailaddress_component_'.$component_key.'_value_'.$key] = array(
+              '#type' => 'textfield',
+              '#title' => 'E-mailadres',
+              '#default_value' => $default,
+            );
+            $form['variable_mail']['mail_component_'.$component_key]['mailfieldset_component_'.$component_key.'_value_'.$key]['mail_sendtest_component_'.$component_key.'_value_'.$key] = array(
               '#type' => 'button',
-              '#value' => 'Verwijder',
-              '#name' => 'mail_del_component_'.$component_key,
-              '#weight' => 99,
+              '#value' => 'Verstuur een testmail',
+              '#name' => 'mail_sendtest_component_'.$component_key.'_value_'.$key,
               '#ajax' => array(
                 'wrapper' => 'spwebformsync_ajax_form',
                 'callback' => 'spwebformsync_ajax_form_callback',
@@ -316,6 +334,16 @@ function spwebformsync_admin_form($form, &$form_state, $form_id = NULL) {
             );
           }
         }
+        $form['variable_mail']['mail_component_'.$component_key]['mail_del_component_'.$component_key] = array(
+          '#type' => 'button',
+          '#value' => 'Verwijder',
+          '#name' => 'mail_del_component_'.$component_key,
+          '#weight' => 99,
+          '#ajax' => array(
+            'wrapper' => 'spwebformsync_ajax_form',
+            'callback' => 'spwebformsync_ajax_form_callback',
+          ),
+        );
       }
       if (!empty($webform_components)) {
         $webform_component_select_options = spwebformsync_get_components_list($webform_components);
@@ -419,6 +447,45 @@ function spwebformsync_admin_form_validate($form, &$form_state) {
       $form_state['rebuild'] = TRUE;
       return;
       break;
+    case 'fixed_mail_send_test':
+      $send = TRUE;
+      if (empty($values['fixed_mail_text']['value'])) {
+        $send = FALSE;
+        form_set_error('fixed_mail_text', 'De tekst van de e-mail is leeg.');
+      }
+      if (empty($values['fixed_mail_subject'])) {
+        $send = FALSE;
+        form_set_error('fixed_mail_subject', 'Geef de mail een onderwerp.');
+      }
+      if (!valid_email_address($values['fixed_mail_emailaddress'])) {
+        $send = FALSE;
+        form_set_error('fixed_mail_emailaddress', 'Vul een geldig e-mailadres in.');
+      }
+      if ($send) {
+        // Send mail
+        $site_mail = variable_get('site_mail', ini_get('sendmail_from'));
+        $text_raw = $values['fixed_mail_text']['value'];
+        $filter_format = $values['fixed_mail_text']['format'];
+        $text = check_markup($text_raw, $filter_format);
+        $subject = $values['fixed_mail_subject'];
+
+        $params = array(
+          'text' => $text,
+          'subject' => $subject,
+        );
+        $message = drupal_mail('spwebformsync', 'sync_mail', $values['fixed_mail_emailaddress'], language_default(), $params, $site_mail);
+        if (!empty($message['result'])) {
+          // Mail verzonden.
+          drupal_set_message('Er is een e-mail verzonden');
+        }
+        else {
+          // Mail faal.
+          drupal_set_message('Er is iets misgegaan met het verzenden van de e-mail.');
+        }
+      }
+      $form_state['rebuild'] = TRUE;
+      return;
+      break;
     }
 
     // Delete variable group syncs button.
@@ -437,6 +504,51 @@ function spwebformsync_admin_form_validate($form, &$form_state) {
       unset($storage['mail_selected_webform_components'][$matches[1]]);
       unset($sync_data[$webform]['variable_mail'][$matches[1]]);
       variable_set('spwebformsync_sync_data', $sync_data);
+    }
+
+    // Variable test mail sending.
+    preg_match('/^mail_sendtest_component_([0-9]+)_value_([[a-z_]+)$/', $trigger, $matches);
+    if (!empty($matches[1]) && !empty($matches[2])) {
+      $send = TRUE;
+      $text_field = 'mail_component_'.$matches[1].'_value_'.$matches[2];
+      $subject_field = 'mail_subject_component_'.$matches[1].'_value_'.$matches[2];
+      $address_field = 'mail_testmailaddress_component_'.$matches[1].'_value_'.$matches[2];
+      if (empty($values[$text_field]['value'])) {
+        $send = FALSE;
+        form_set_error($text_field, 'De tekst van de e-mail is leeg.');
+      }
+      if (empty($values[$subject_field])) {
+        $send = FALSE;
+        form_set_error($subject_field, 'Geef de mail een onderwerp.');
+      }
+      if (!valid_email_address($values[$address_field])) {
+        $send = FALSE;
+        form_set_error($address_field, 'Vul een geldig e-mailadres in.');
+      }
+      if ($send) {
+        // Send mail
+        $site_mail = variable_get('site_mail', ini_get('sendmail_from'));
+        $text_raw = $values[$text_field]['value'];
+        $filter_format = $values[$text_field]['format'];
+        $text = check_markup($text_raw, $filter_format);
+        $subject = $values[$subject_field];
+
+        $params = array(
+          'text' => $text,
+          'subject' => $subject,
+        );
+        $message = drupal_mail('spwebformsync', 'sync_mail', $values[$address_field], language_default(), $params, $site_mail);
+        if (!empty($message['result'])) {
+          // Mail verzonden.
+          drupal_set_message('Er is een e-mail verzonden');
+        }
+        else {
+          // Mail faal.
+          drupal_set_message('Er is iets misgegaan met het verzenden van de e-mail.');
+        }
+      }
+      $form_state['rebuild'] = TRUE;
+      return;
     }
   }
 
