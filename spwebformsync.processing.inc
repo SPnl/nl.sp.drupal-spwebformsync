@@ -217,17 +217,26 @@ function spwebformsync_sync() {
   $max_cron_number = variable_get('spwebformsync_cron_number', 0);
   $sync_data = variable_get('spwebformsync_sync_data', FALSE);
   $processed = array();
+  $items_found = TRUE;
   if (!empty($sync_data)) {
-    foreach ($sync_data as $webform_id => $data) {
-      for ($i = 1; $i <= $max_cron_number; $i ++) {
-        $submission_id = spwebformsync_get_unprocessed_submission_id($webform_id); 
-        if (empty($submission_id)) {
-          break;
-        }
-        $submission = webform_get_submission($webform_id, $submission_id);
-        if (!empty($submission)) {
-          spwebformsync_process_submission($submission);
-          $processed[$submission_id] = $submission_id;
+    $number_of_webforms_to_sync = count($sync_data);
+    $items_per_webform = ceil($max_cron_number / $number_of_webforms_to_sync);
+    $count = 0;
+    while ($count < $max_cron_number && $items_found) {
+      $items_found = FALSE;
+      foreach ($sync_data as $webform_id => $data) {
+        for ($i = 1; $i <= $items_per_webform; $i ++) {
+          $submission_id = spwebformsync_get_unprocessed_submission_id($webform_id);
+          if (empty($submission_id)) {
+            break;
+          }
+          $submission = webform_get_submission($webform_id, $submission_id);
+          if (!empty($submission)) {
+            $items_found = TRUE;
+            $count ++;
+            spwebformsync_process_submission($submission);
+            $processed[$submission_id] = $submission_id;
+          }
         }
       }
     }
