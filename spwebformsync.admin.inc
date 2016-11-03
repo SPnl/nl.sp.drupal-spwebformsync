@@ -252,10 +252,25 @@ function spwebformsync_admin_form($form, &$form_state, $form_id = NULL) {
         '#default_value' => isset($default['value']) ? $default['value'] : '',
       );
 
-      $form['fixed_mail']['fixed_mail_emailaddress'] = array(
+      if (!empty($sync_data[$webform->nid]['fixed_mail_sender_emailadress'])) {
+        $default = $sync_data[$webform->nid]['fixed_mail_sender_emailadress'];
+      }
+      else {
+        $default = '';
+      }
+      $form['fixed_mail']['fixed_mail_sender_emailadress'] = array(
         '#type' => 'textfield',
-        '#title' => 'E-mailadres',
+        '#title' => 'Afzend e-mailadres',
+        '#description' => 'De afzender van de e-mails.',
+        '#default_value' => $default,
       );
+
+      $form['fixed_mail']['fixed_mail_test_emailadress'] = array(
+        '#type' => 'textfield',
+        '#title' => 'Test e-mailadres',
+        '#description' => 'Hier wordt de testemail heen gestuurd.',
+      );
+
       $form['fixed_mail']['fixed_mail_send_test'] = array(
         '#type' => 'button',
         '#value' => 'Verstuur een testmail',
@@ -318,10 +333,20 @@ function spwebformsync_admin_form($form, &$form_state, $form_id = NULL) {
               '#format' => isset($default['format']) ? $default['format'] : NULL,
               '#default_value' => isset($default['value']) ? $default['value'] : '',
             );
+            if (!empty($sync_data[$webform->nid]['variable_mail'][$component_key]['values'][$key])) {
+              $default = $sync_data[$webform->nid]['variable_mail'][$component_key]['values'][$key]['sender'];
+            }
+            else {
+              $default = '';
+            }
+            $form['variable_mail']['mail_component_'.$component_key]['mailfieldset_component_'.$component_key.'_value_'.$key]['mail_sendermailaddress_component_'.$component_key.'_value_'.$key] = array(
+              '#type' => 'textfield',
+              '#title' => 'Afzend e-mailadres',
+              '#default_value' => $default,
+            );
             $form['variable_mail']['mail_component_'.$component_key]['mailfieldset_component_'.$component_key.'_value_'.$key]['mail_testmailaddress_component_'.$component_key.'_value_'.$key] = array(
               '#type' => 'textfield',
-              '#title' => 'E-mailadres',
-              '#default_value' => $default,
+              '#title' => 'test e-mailadres',
             );
             $form['variable_mail']['mail_component_'.$component_key]['mailfieldset_component_'.$component_key.'_value_'.$key]['mail_sendtest_component_'.$component_key.'_value_'.$key] = array(
               '#type' => 'button',
@@ -457,13 +482,18 @@ function spwebformsync_admin_form_validate($form, &$form_state) {
         $send = FALSE;
         form_set_error('fixed_mail_subject', 'Geef de mail een onderwerp.');
       }
-      if (!valid_email_address($values['fixed_mail_emailaddress'])) {
+      if (!valid_email_address($values['fixed_mail_sender_emailadress'])) {
         $send = FALSE;
-        form_set_error('fixed_mail_emailaddress', 'Vul een geldig e-mailadres in.');
+        form_set_error('fixed_mail_sender_emailadress', 'Vul een geldig e-mailadres in.');
+      }
+      if (!valid_email_address($values['fixed_mail_test_emailadress'])) {
+        $send = FALSE;
+        form_set_error('fixed_mail_test_emailadress', 'Vul een geldig e-mailadres in.');
       }
       if ($send) {
         // Send mail
         $site_mail = variable_get('site_mail', ini_get('sendmail_from'));
+        $sender_mail = !empty($values['fixed_mail_sender_emailadress']) ? $values['fixed_mail_sender_emailadress'] : $site_mail;
         $text_raw = $values['fixed_mail_text']['value'];
         $filter_format = $values['fixed_mail_text']['format'];
         $text = check_markup($text_raw, $filter_format);
@@ -473,7 +503,7 @@ function spwebformsync_admin_form_validate($form, &$form_state) {
           'text' => $text,
           'subject' => $subject,
         );
-        $message = drupal_mail('spwebformsync', 'sync_mail', $values['fixed_mail_emailaddress'], language_default(), $params, $site_mail);
+        $message = drupal_mail('spwebformsync', 'sync_mail', $values['fixed_mail_test_emailadress'], language_default(), $params, $sender_mail);
         if (!empty($message['result'])) {
           // Mail verzonden.
           drupal_set_message('Er is een e-mail verzonden');
@@ -512,7 +542,8 @@ function spwebformsync_admin_form_validate($form, &$form_state) {
       $send = TRUE;
       $text_field = 'mail_component_'.$matches[1].'_value_'.$matches[2];
       $subject_field = 'mail_subject_component_'.$matches[1].'_value_'.$matches[2];
-      $address_field = 'mail_testmailaddress_component_'.$matches[1].'_value_'.$matches[2];
+      $sender_address_field = 'mail_sendermailaddress_component_'.$matches[1].'_value_'.$matches[2];
+      $test_address_field = 'mail_testmailaddress_component_'.$matches[1].'_value_'.$matches[2];
       if (empty($values[$text_field]['value'])) {
         $send = FALSE;
         form_set_error($text_field, 'De tekst van de e-mail is leeg.');
@@ -521,13 +552,18 @@ function spwebformsync_admin_form_validate($form, &$form_state) {
         $send = FALSE;
         form_set_error($subject_field, 'Geef de mail een onderwerp.');
       }
-      if (!valid_email_address($values[$address_field])) {
+      if (!valid_email_address($values[$sender_address_field])) {
         $send = FALSE;
-        form_set_error($address_field, 'Vul een geldig e-mailadres in.');
+        form_set_error($test_address_field, 'Vul een geldig e-mailadres in.');
+      }
+      if (!valid_email_address($values[$test_address_field])) {
+        $send = FALSE;
+        form_set_error($test_address_field, 'Vul een geldig e-mailadres in.');
       }
       if ($send) {
         // Send mail
         $site_mail = variable_get('site_mail', ini_get('sendmail_from'));
+        $sender_mail = !empty($values[$sender_address_field]) ? $values[$sender_address_field] : $site_mail;
         $text_raw = $values[$text_field]['value'];
         $filter_format = $values[$text_field]['format'];
         $text = check_markup($text_raw, $filter_format);
@@ -537,7 +573,7 @@ function spwebformsync_admin_form_validate($form, &$form_state) {
           'text' => $text,
           'subject' => $subject,
         );
-        $message = drupal_mail('spwebformsync', 'sync_mail', $values[$address_field], language_default(), $params, $site_mail);
+        $message = drupal_mail('spwebformsync', 'sync_mail', $values[$test_address_field], language_default(), $params, $sender_mail);
         if (!empty($message['result'])) {
           // Mail verzonden.
           drupal_set_message('Er is een e-mail verzonden');
@@ -584,6 +620,7 @@ function spwebformsync_admin_form_submit($form, &$form_state) {
     'webform',
     'fixed_mail_text',
     'fixed_mail_subject',
+    'fixed_mail_sender_emailadress',
   );
   $storage_values = array(
     'selected_fixed_groups',
@@ -639,6 +676,7 @@ function spwebformsync_admin_form_submit($form, &$form_state) {
           'value_name' => $component_options[$selected_value_id],
           'mail' => $value,
           'subject' => $values['mail_subject_component_'.$component_id.'_value_'.$selected_value_id],
+          'sender' => $values['mail_sendermailaddress_component_'.$component_id.'_value_'.$selected_value_id],
         );
       }
     }
