@@ -29,6 +29,9 @@ function spwebformsync_process_submission($submission) {
     elseif ($result === 'insufficient data') {
       spwebformsync_store_submission_sync_state($submission->nid, $submission->sid, 'insufficient data');
     }
+    elseif ($result === 'contact id not found') {
+      spwebformsync_store_submission_sync_state($submission->nid, $submission->sid, 'contact id not found');
+    }
     else {
       $contact_id = $result;
       spwebformsync_store_submission_sync_state($submission->nid, $submission->sid, 'synced');
@@ -132,6 +135,7 @@ function spwebformsync_store_submission_sync_state($nid, $sid, $state) {
     'synced' => '1',
     'error' => '2',
     'insufficient data' => '3',
+    'contact id not found' => '4',
   );
   if (!empty($nid) && !empty($sid) && isset($states[$state])) {
     $new_state = $states[$state];
@@ -234,6 +238,9 @@ function spwebformsync_sync() {
           $count ++;
           spwebformsync_process_submission($submission);
           $processed[$submission_id] = $submission_id;
+        }
+        if ($count >= $max_cron_number) {
+          break;
         }
       }
     }
