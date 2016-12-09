@@ -242,6 +242,7 @@ function spwebformsync_sync() {
         if ($count >= $max_cron_number) {
           break;
         }
+        sleep(1);
       }
     }
   }
