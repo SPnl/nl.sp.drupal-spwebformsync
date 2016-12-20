@@ -1,4 +1,7 @@
-
+.page-admin-config-sp-spwebformsync legend {
+  height: auto;
+  position: relative;
+}
 
 .page-admin-config-sp-spwebformsync table tr {
   background-color: #e4e4e4;
