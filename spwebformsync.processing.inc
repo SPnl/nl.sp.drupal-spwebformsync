@@ -26,8 +26,8 @@ function spwebformsync_process_submission($submission) {
       $data = array('contact_id' => $referal_id);
       $groups = array($sync_data['sprefer_group'] => $sync_data['sprefer_group']);
       $result = spcivipush_push_contact($data, $groups, $submission, $source);
-      $error = spwebformsync_push_contact_process_result($result, $submission, $sync_data); 
-      if ($error) {
+      if ($result === FALSE) {
+        spwebformsync_push_contact_process_result($result, $submission, $sync_data); 
         watchdog('spwebformsync', 'Processed submission nr. ' . $submission->sid);
         return;
       }
@@ -36,7 +36,7 @@ function spwebformsync_process_submission($submission) {
     // Process contact data.
     // Parse data.
     $data = spwebformsync_parse_submission($submission, $sync_data);
-    // Parse gropus.
+    // Parse groups.
     $groups = spwebformsync_parse_groups($submission, $sync_data);
     // Sync submission to CiviCRM.
     $result = spcivipush_push_contact($data, $groups, $submission, $source);
