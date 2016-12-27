@@ -243,11 +243,15 @@ function spwebformsync_sync() {
         }
         $submission = webform_get_submission($webform_id, $submission_id);
         if (!empty($submission)) {
-          $items_found = TRUE;
-          $count ++;
           spwebformsync_process_submission($submission);
-          $processed[$submission_id] = $submission_id;
         }
+        else {
+          spwebformsync_store_submission_sync_state($webform_id, $submission_id, 'insufficient data');
+          watchdog('spwebformsync', 'Processed submission nr. ' . $submission->sid);
+        }
+        $items_found = TRUE;
+        $count ++;
+        $processed[$submission_id] = $submission_id;
         if ($count >= $max_cron_number) {
           break;
         }
