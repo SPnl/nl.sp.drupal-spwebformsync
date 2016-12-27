@@ -11,28 +11,37 @@ function spwebformsync_process_submission($submission) {
   if (isset($sync_data_all[$submission->nid])) {
     watchdog('spwebformsync', 'Processing submission nr. ' . $submission->sid);
     $sync_data = $sync_data_all[$submission->nid];
+
     // Get source.
     // Create contact source line.
     $webform = node_load($sync_data['webform']);
     $site_name = variable_get('site_name');
     $source = 'SP webformsync: ' . $webform->title . ', sid: ' . $submission->sid .' (' . $site_name . ')';
 
+    // Process spreferal.
+    if (!empty($sync_data['sprefer_field']) && !empty($sync_data['sprefer_group'])) {
+      $error = FALSE;
+      // Process SP Referal.
+      $referal_id = $submission->data[$sync_data['sprefer_field']][0];
+      $data = array('contact_id' => $referal_id);
+      $groups = array($sync_data['sprefer_group'] => $sync_data['sprefer_group']);
+      $result = spcivipush_push_contact($data, $groups, $submission, $source);
+      $error = spwebformsync_push_contact_process_result($result, $submission, $sync_data); 
+      if ($error) {
+        watchdog('spwebformsync', 'Processed submission nr. ' . $submission->sid);
+        return;
+      }
+    }
+
+    // Process contact data.
     // Parse data.
     $data = spwebformsync_parse_submission($submission, $sync_data);
     // Parse gropus.
     $groups = spwebformsync_parse_groups($submission, $sync_data);
     // Sync submission to CiviCRM.
     $result = spcivipush_push_contact($data, $groups, $submission, $source);
-    if ($result === FALSE) {
-      spwebformsync_store_submission_sync_state($submission->nid, $submission->sid, 'error');
-    }
-    elseif ($result === 'insufficient data') {
-      spwebformsync_store_submission_sync_state($submission->nid, $submission->sid, 'insufficient data');
-    }
-    elseif ($result === 'contact id not found') {
-      spwebformsync_store_submission_sync_state($submission->nid, $submission->sid, 'contact id not found');
-    }
-    else {
+    $error = spwebformsync_push_contact_process_result($result, $submission, $sync_data); 
+    if (!$error) {
       $contact_id = $result;
       spwebformsync_store_submission_sync_state($submission->nid, $submission->sid, 'synced');
       spwebformsync_send_mails($contact_id, $sync_data, $submission);
@@ -363,4 +372,21 @@ function spwebformsync_send_mail($contact_data, $subject, $text) {
   else {
     drupal_set_message('Site e-mailadres is niet ingesteld. Neem contact op met webmaster@sp.nl.', 'error');
   }
+}
+
+function spwebformsync_push_contact_process_result($result, $submission, $sync_data) {
+  $error = FALSE;
+  if ($result === FALSE) {
+    spwebformsync_store_submission_sync_state($submission->nid, $submission->sid, 'error');
+    $error = TRUE;
+  }
+  elseif ($result === 'insufficient data') {
+    spwebformsync_store_submission_sync_state($submission->nid, $submission->sid, 'insufficient data');
+    $error = TRUE;
+  }
+  elseif ($result === 'contact id not found') {
+    spwebformsync_store_submission_sync_state($submission->nid, $submission->sid, 'contact id not found');
+    $error = TRUE;
+  }
+  return $error;
 }

@@ -153,7 +153,7 @@ function spwebformsync_admin_form($form, &$form_state, $form_id = NULL) {
       // --------------------------------------------------------------------
       $form['variable_group_select'] = array(
         '#type' => 'fieldset', 
-        '#title' => 'Synchronizeer webformulier selectie veldwaarden naar CiviCRM groepen (optioneel)',
+        '#title' => 'Synchroniseer webformulier selectie veldwaarden naar CiviCRM groepen (optioneel)',
       );
       // Get webform select components.
       $webform_components = spwebformsync_get_webform_allowed_components($webform_default, array('select' => 'select'));
@@ -220,12 +220,52 @@ function spwebformsync_admin_form($form, &$form_state, $form_id = NULL) {
         );
       }
 
+      // SP Refer sync.
+      // ----------------------------------------------------------------------------------
+      $form['sprefer_fieldset'] = array(
+        '#type' => 'fieldset', 
+        '#title' => 'SP Referal formulier synchronisatie (optioneel)',
+        '#description' => 'Selecteer het veld waarin het CiviCRM contactnummer dat in de url van het formulier is meegegeven wordt opgeslagen. Kies vervolgens de groep waar dit contact in CiviCRM moet worden toegevoegd.',
+        '#collapsible' => TRUE, 
+        '#collapsed' => TRUE,
+      );
+
+      if (!empty($sync_data[$webform->nid]['sprefer_field'])) {
+        $default = $sync_data[$webform->nid]['sprefer_field'];
+      }
+      else {
+        $default = '';
+      }
+      $form['sprefer_fieldset']['sprefer_field'] = array(
+        '#type' => 'select',
+        '#title' => 'Formulier veld',
+        '#options' => $webform_component_select_options,
+        '#empty_option' => '- Geen -',
+        '#default_value' => $default,
+      );
+
+      $sprefer_group = $sync_data[$webform->nid]['sprefer_group'];
+      if (!empty($sprefer_group)) {
+        $default = $groups[$sprefer_group] . ' (' . $sprefer_group . ')';
+      }
+      else {
+        $default = '';
+      }
+      $form['sprefer_fieldset']['sprefer_group'] = array(
+        '#type' => 'textfield',
+        '#title' => 'Selecteer groep',
+        '#autocomplete_path' => 'spwebformsync/group/autocomplete',
+        '#default_value' => $default,
+      );
+
       // Fixed mail.
       // --------------------------------------------------------------------
       $form['fixed_mail'] = array(
         '#type' => 'fieldset', 
         '#title' => 'E-mail: altijd',
         '#description' => '<strong>Let op!</strong> Het is mogelijk om CiviCRM contact veldwaarden in de mail en het onderwerp te gebruiken door de veldnaam tussen vierkante haken te plaatsen. Onder andere [contact_id], [display_name], [email] en [phone].',
+        '#collapsible' => TRUE, 
+        '#collapsed' => TRUE,
       );
       if (!empty($sync_data[$webform->nid]['fixed_mail_subject'])) {
         $default = $sync_data[$webform->nid]['fixed_mail_subject'];
@@ -287,6 +327,8 @@ function spwebformsync_admin_form($form, &$form_state, $form_id = NULL) {
         '#type' => 'fieldset', 
         '#title' => 'Email: antwoordafhankelijk',
         '#description' => '<strong>Let op!</strong> Het is mogelijk om CiviCRM contact veldwaarden in de mail en het onderwerp te gebruiken door de veldnaam tussen vierkante haken te plaatsen. Onder andere [contact_id], [display_name], [email] en [phone].',
+        '#collapsible' => TRUE, 
+        '#collapsed' => TRUE,
       );
       // Get webform select components.
       $webform_components = spwebformsync_get_webform_allowed_components($webform_default, array('select' => 'select'));
@@ -621,6 +663,7 @@ function spwebformsync_admin_form_submit($form, &$form_state) {
     'fixed_mail_text',
     'fixed_mail_subject',
     'fixed_mail_sender_emailadress',
+    'sprefer_field',
   );
   $storage_values = array(
     'selected_fixed_groups',
@@ -641,6 +684,10 @@ function spwebformsync_admin_form_submit($form, &$form_state) {
       $sync_data[$values['webform']][$key] = $value;
     }
   }
+  // Store sprefer group.
+  $group = spwebformsync_parse_group_form_select_value($values['sprefer_group']);
+  $sync_data[$values['webform']]['sprefer_group'] = $group;
+
   // Store selected variable group syncs.
   foreach ($values as $key => $value) {
     if (!empty($value)) {
