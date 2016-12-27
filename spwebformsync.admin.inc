@@ -222,41 +222,45 @@ function spwebformsync_admin_form($form, &$form_state, $form_id = NULL) {
 
       // SP Refer sync.
       // ----------------------------------------------------------------------------------
-      $form['sprefer_fieldset'] = array(
-        '#type' => 'fieldset', 
-        '#title' => 'SP Referal formulier synchronisatie (optioneel)',
-        '#description' => 'Selecteer het veld waarin het CiviCRM contactnummer dat in de url van het formulier is meegegeven wordt opgeslagen. Kies vervolgens de groep waar dit contact in CiviCRM moet worden toegevoegd.',
-        '#collapsible' => TRUE, 
-        '#collapsed' => TRUE,
-      );
+      $webform_components = spwebformsync_get_webform_allowed_components($webform_default, $allowed_types);
+      if (!empty($webform_components)) {
+        $webform_component_select_options = spwebformsync_get_components_list($webform_components);
+        $form['sprefer_fieldset'] = array(
+          '#type' => 'fieldset', 
+          '#title' => 'SP Referal formulier synchronisatie (optioneel)',
+          '#description' => 'Selecteer het veld waarin het CiviCRM contactnummer dat in de url van het formulier is meegegeven wordt opgeslagen. Kies vervolgens de groep waar dit contact in CiviCRM moet worden toegevoegd.',
+          '#collapsible' => TRUE, 
+          '#collapsed' => TRUE,
+        );
 
-      if (!empty($sync_data[$webform->nid]['sprefer_field'])) {
-        $default = $sync_data[$webform->nid]['sprefer_field'];
-      }
-      else {
-        $default = '';
-      }
-      $form['sprefer_fieldset']['sprefer_field'] = array(
-        '#type' => 'select',
-        '#title' => 'Formulier veld',
-        '#options' => $webform_component_select_options,
-        '#empty_option' => '- Geen -',
-        '#default_value' => $default,
-      );
+        if (!empty($sync_data[$webform->nid]['sprefer_field'])) {
+          $default = $sync_data[$webform->nid]['sprefer_field'];
+        }
+        else {
+          $default = '';
+        }
+        $form['sprefer_fieldset']['sprefer_field'] = array(
+          '#type' => 'select',
+          '#title' => 'Formulier veld',
+          '#options' => $webform_component_select_options,
+          '#empty_option' => '- Geen -',
+          '#default_value' => $default,
+        );
 
-      $sprefer_group = $sync_data[$webform->nid]['sprefer_group'];
-      if (!empty($sprefer_group)) {
-        $default = $groups[$sprefer_group] . ' (' . $sprefer_group . ')';
+        $sprefer_group = $sync_data[$webform->nid]['sprefer_group'];
+        if (!empty($sprefer_group)) {
+          $default = $groups[$sprefer_group] . ' (' . $sprefer_group . ')';
+        }
+        else {
+          $default = '';
+        }
+        $form['sprefer_fieldset']['sprefer_group'] = array(
+          '#type' => 'textfield',
+          '#title' => 'Selecteer groep',
+          '#autocomplete_path' => 'spwebformsync/group/autocomplete',
+          '#default_value' => $default,
+        );
       }
-      else {
-        $default = '';
-      }
-      $form['sprefer_fieldset']['sprefer_group'] = array(
-        '#type' => 'textfield',
-        '#title' => 'Selecteer groep',
-        '#autocomplete_path' => 'spwebformsync/group/autocomplete',
-        '#default_value' => $default,
-      );
 
       // Fixed mail.
       // --------------------------------------------------------------------
