@@ -273,7 +273,7 @@ function spwebformsync_admin_form($form, &$form_state, $form_id = NULL) {
       // --------------------------------------------------------------------
       $form['fixed_mail'] = array(
         '#type' => 'fieldset', 
-        '#title' => 'E-mail: altijd',
+        '#title' => 'E-mail naar contact: altijd',
           '#description' => '<strong>Let op!</strong> Het is mogelijk om CiviCRM contact veldwaarden in de mail en het onderwerp te gebruiken door de veldnaam tussen vierkante haken te plaatsen. Onder andere [contact_id], [first_name], [middle_name], [last_name], [display_name], [email], [phone], [mobile], [afdeling] en [afdeling_code].',
         '#collapsible' => TRUE, 
         '#collapsed' => TRUE,
@@ -347,7 +347,7 @@ function spwebformsync_admin_form($form, &$form_state, $form_id = NULL) {
           '#collapsible' => TRUE, 
           '#collapsed' => TRUE,
         );
-        $form[$type . '_mail']['#title'] = ($type === 'variable') ? 'Email: antwoordafhankelijk' : 'Email: antwoordafhankelijk naar afdeling';
+        $form[$type . '_mail']['#title'] = ($type === 'variable') ? 'Email naar contact: antwoordafhankelijk' : 'Email naar afdeling: antwoordafhankelijk';
         // Get webform select components.
         $webform_components = spwebformsync_get_webform_allowed_components($webform_default, array('select' => 'select'));
         // Show selected fields.
@@ -535,19 +535,6 @@ function spwebformsync_admin_form_validate($form, &$form_state) {
       $form_state['rebuild'] = TRUE;
       return;
       break;
-    case 'mail_add_webform_comp':
-      $webform_components = spwebformsync_get_webform_allowed_components($form_state['values']['webform'], array('select' => 'select'));
-      $webform_component_select_options = webform_component_list($webform, $webform_components, FALSE);
-      // Store selected webform component.
-      if (!empty($form_state['values']['mail_webform_component'])) {
-        $component_id = $form_state['values']['mail_webform_component'];
-        $storage['mail_selected_webform_components'][$component_id]['name'] = $webform_component_select_options[$component_id];
-        // Empty group field.
-        unset($form_state['input']['mail_webform_component']);
-      }
-      $form_state['rebuild'] = TRUE;
-      return;
-      break;
     case 'fixed_mail_send_test':
       $send = TRUE;
       if (empty($values['fixed_mail_text']['value'])) {
@@ -608,6 +595,22 @@ function spwebformsync_admin_form_validate($form, &$form_state) {
       'afdeling',
     );
     foreach ($types as $type) {
+      // Add variable or afdeling mail button.
+      if (preg_match('/^' . $type . '_mail_add_webform_comp$/', $trigger)) {
+        $webform_components = spwebformsync_get_webform_allowed_components($form_state['values']['webform'], array('select' => 'select'));
+        $webform_component_select_options = webform_component_list($webform, $webform_components, FALSE);
+        // Store selected webform component.
+        if (!empty($form_state['values'][$type . '_mail_webform_component'])) {
+          $component_id = $form_state['values'][$type . '_mail_webform_component'];
+          $storage[$type . '_mail_selected_webform_components'][$component_id]['name'] = $webform_component_select_options[$component_id];
+          // Empty group field.
+          unset($form_state['input'][$type . '_mail_webform_component']);
+        }
+        $form_state['rebuild'] = TRUE;
+        return;
+        break;
+      }
+
       // Delete variable group syncs button.
       preg_match('/^' . $type . '_mail_del_component_([0-9]+)$/', $trigger, $matches);
       if (!empty($matches[1])) {
