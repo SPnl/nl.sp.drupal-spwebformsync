@@ -294,38 +294,94 @@ function spwebformsync_check_address_manually($street_and_number, $contact_id) {
 
 function spwebformsync_send_mails($contact_id, $sync_data, $submission) {
   if (!empty($sync_data)) {
-    if (!empty($sync_data['fixed_mail_text']['value']) || !empty($sync_data['variable_mail'])) {
+    if (
+      !empty($sync_data['fixed_mail_text']['value']) ||
+      !empty($sync_data['afdeling_mail']) ||
+      !empty($sync_data['variable_mail'])
+    ) {
       // Get contact data from CiviCRM.
       $spcivi = \SPCivi::getInstance();
       $params = array(
-        'id' => $contact_id,
+        'contact_id' => $contact_id,
+        'include_non_menmbers' => 1,
       );
-      $get_contact_results = $spcivi->api('Contact', 'get', $params);
+      $get_contact_results = $spcivi->api('Contact', 'getspdata', $params);
       $debug_info = 'Getting contact to send mail. Submission id: ' . $submission->sid;
       if (_spcivipush_check_result($get_contact_results, 'contacten', 'get', $params, $debug_info)) {
         if (!empty($get_contact_results['values'])) {
           $contact_data = array_pop($get_contact_results['values']); 
 
-          // Send fixed mail.
-          if (!empty($sync_data['fixed_mail_text']['value'])) {
-            $text_raw = $sync_data['fixed_mail_text']['value'];
-            $filter_format = $sync_data['fixed_mail_text']['format'];
-            $text = check_markup($text_raw, $filter_format);
-            $subject = $sync_data['fixed_mail_subject'];
-            spwebformsync_send_mail($contact_data, $subject, $text);
+          if (!empty($contact_data['email'])) {
+            // Send fixed mail.
+            if (!empty($sync_data['fixed_mail_text']['value'])) {
+              $subject = '';
+              if (empty($contact_data['email'])) {
+                $mailto = variable_get('site_mail', ini_get('sendmail_from'));
+                $subject = 'Niet aan contact verzonden (e-mailadres contact onbekend): ';
+              }
+              else {
+                $mailto = $contact_data['email'];
+              }
+              if (!empty($mailto)) {
+                $text_raw = $sync_data['fixed_mail_text']['value'];
+                $filter_format = $sync_data['fixed_mail_text']['format'];
+                $text = check_markup($text_raw, $filter_format);
+                $subject .= $sync_data['fixed_mail_subject'];
+                $mailfrom = $sync_data['fixed_mail_sender_emailadress'];
+                spwebformsync_send_mail($contact_data, $subject, $text, $mailto, $mailfrom);
+              }
+            }
           }
 
-          // Send variable mail.
-          if (!empty($sync_data['variable_mail'])) {
-            foreach ($sync_data['variable_mail'] as $component_id => $to_mail_data) {
-              if (!empty($submission->data[$component_id])) {
-                foreach ($submission->data[$component_id] as $answer_key) {
-                  if (!empty($to_mail_data['values'][$answer_key]['mail']['value'])) {
-                    $text_raw = $to_mail_data['values'][$answer_key]['mail']['value'];
-                    $filter_format = $to_mail_data['values'][$answer_key]['mail']['format'];
-                    $text = check_markup($text_raw, $filter_format);
-                    $subject = $to_mail_data['values'][$answer_key]['subject'];
-                    spwebformsync_send_mail($contact_data, $subject, $text);
+          // Send variable mail and afdeling mail.
+          $types = array(
+            'variable',
+            'afdeling',
+          );
+          foreach ($types as $type) {
+            if (!empty($sync_data[$type . '_mail'])) {
+              $subject = '';
+              if ($type === 'variable') {
+                // Variable mail.
+                if (empty($contact_data['email'])) {
+                  $mailto = variable_get('site_mail', ini_get('sendmail_from'));
+                  $subject = 'Niet aan contact verzonden (e-mailadres contact onbekend): ';
+                }
+                else {
+                  $mailto = $contact_data['email'];
+                }
+              }
+              else {
+                // Afdeling mail.
+                if (empty($contact_data['afdeling_code'])) {
+                  $mailto = variable_get('site_mail', ini_get('sendmail_from'));
+                  $subject = 'Niet aan afdeling verzonden (afdeling van contact onbekend): ';
+                }
+                else {
+                  $afdeling = spwebformsync_get_afdeling($contact_data['afdeling_code']);
+                  $afdeling_wrapper = entity_metadata_wrapper('node', $afdeling);
+                  if (empty($afdeling_wrapper->afd_email->value())) {
+                    $mailto = variable_get('site_mail', ini_get('sendmail_from'));
+                    $subject = 'Niet aan afdeling verzonden (e-mailadres afdeling onbekend): ';
+                  }
+                  else {
+                    $mailto = $afdeling_wrapper->afd_email->value();
+                  }
+                }
+              }
+              if (empty($mailto)) continue;
+              foreach ($sync_data[$type . '_mail'] as $component_id => $to_mail_data) {
+                if (!empty($submission->data[$component_id])) {
+                  foreach ($submission->data[$component_id] as $answer_key) {
+                    if (!empty($to_mail_data['values'][$answer_key]['mail']['value'])) {
+                      $data = $to_mail_data['values'][$answer_key];
+                      $text_raw = $data['mail']['value'];
+                      $filter_format = $data['mail']['format'];
+                      $text = check_markup($text_raw, $filter_format);
+                      $subject .= $data['subject'];
+                      $mailfrom = $data['sender'];
+                      spwebformsync_send_mail($contact_data, $subject, $text, $mailto, $mailfrom);
+                    }
                   }
                 }
               }
@@ -337,9 +393,10 @@ function spwebformsync_send_mails($contact_id, $sync_data, $submission) {
   }
 }
 
-function spwebformsync_send_mail($contact_data, $subject, $text) {
+function spwebformsync_send_mail($contact_data, $subject, $text, $mailto, $mailfrom) {
   $site_mail = variable_get('site_mail', ini_get('sendmail_from'));
-  if (!empty($site_mail)) {
+  if (empty($mailfrom)) $mailfrom = $site_mail;
+  if (!empty($mailfrom)) {
     // Replace contact data in subject and body text.
     $raw_texts = array(
       'subject' => $subject,
@@ -362,15 +419,17 @@ function spwebformsync_send_mail($contact_data, $subject, $text) {
       'text' => $text,
       'subject' => $subject,
     );
-    $message = drupal_mail('spwebformsync', 'sync_mail', $contact_data['email'], language_default(), $params, $site_mail);
+    $message = drupal_mail('spwebformsync', 'sync_mail', $mailto, language_default(), $params, $mailfrom);
     // Process result.
     if (!empty($message['result'])) {
       // Mail verzonden.
       drupal_set_message('Er is een e-mail verzonden');
+      watchdog('spwebformsync', 'Er is een e-mail verzonden.');
     }
     else {
       // Mail faal.
       drupal_set_message('Er is iets misgegaan met het verzenden van de e-mail.');
+      watchdog('spwebformsync', 'Er is iets misgegaan bij het verzenden van een e-mail.', WATCHDOG_ERROR);
     }
   }
   else {
@@ -393,4 +452,22 @@ function spwebformsync_push_contact_process_result($result, $submission, $sync_d
     $error = TRUE;
   }
   return $error;
+}
+
+function spwebformsync_get_afdeling($afdeling_id) {
+  $query = new EntityFieldQuery();
+  $result= $query->entityCondition('entity_type', 'node')
+    ->entityCondition('bundle', 'afdeling')
+    ->propertyCondition('status', NODE_PUBLISHED)
+    ->fieldCondition('afd_id', 'value', $afdeling_id, '=')
+    ->fieldCondition('afd_status', 'value', 'Erkend', '=')
+    ->execute();
+
+  if (isset($result['node'])) {
+    $afdeling_items_nids = array_keys($result['node']);
+    $afdeling_items = entity_load('node', $afdeling_items_nids);
+    if (!empty($afdeling_items)) {
+      return array_pop($afdeling_items);
+    }
+  } 
 }
