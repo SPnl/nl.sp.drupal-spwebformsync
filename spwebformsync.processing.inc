@@ -78,6 +78,7 @@ function spwebformsync_parse_submission($submission, $sync_data) {
       }
     }
   }
+  $data['overwrite'] = empty($sync_data['overwrite']['overwrite']) ? FALSE : TRUE;
   return $data;
 }
 

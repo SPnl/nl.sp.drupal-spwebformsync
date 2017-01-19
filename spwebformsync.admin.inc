@@ -94,6 +94,25 @@ function spwebformsync_admin_form($form, &$form_state, $form_id = NULL) {
 
       }
 
+      // Add option to overwrite existing civi data.
+      if (!empty($sync_data[$webform->nid]['contact_id_component']) && !isset($values['contact_id_component'])) {
+        $values['contact_id_component'] = $sync_data[$webform->nid]['contact_id_component'];
+      }
+      if (!empty($values['contact_id_component'])) {
+        $default_value = !empty($sync_data[$webform->nid]['overwrite']['overwrite']) ? array('overwrite') : array();
+        $form['fields']['overwrite'] = array(
+          '#type' => 'checkboxes',
+          '#title' => 'Overschrijf bestaande waarden in CiviCRM',
+          '#default_value' => $default_value,
+          '#options' => array('overwrite' => 'Overschrijf bestaande CiviCRM waarden'),
+        );
+        // Set default value.
+        if (isset($values['overwrite'])) {
+          $form['fields']['overwrite']['#default_value'] = $values['overwrite'];
+        }
+      }
+
+
       // Add group selection.
       // -----------------------------------------------------------------
 
@@ -726,6 +745,10 @@ function spwebformsync_admin_form_submit($form, &$form_state) {
     if (preg_match('/^[a-z_]+_component$/', $key)) {
       $sync_data[$values['webform']][$key] = $value;
     }
+  }
+  // Store overwrite.
+  if (isset($values['overwrite'])) {
+    $sync_data[$values['webform']]['overwrite'] = $values['overwrite'];
   }
   // Store sprefer group.
   $group = spwebformsync_parse_group_form_select_value($values['sprefer_group']);
