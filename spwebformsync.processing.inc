@@ -16,7 +16,8 @@ function spwebformsync_process_submission($submission) {
     // Create contact source line.
     $webform = node_load($sync_data['webform']);
     $site_name = variable_get('site_name');
-    $source = 'SP webformsync: ' . $webform->title . ', sid: ' . $submission->sid .' (' . $site_name . ')';
+    global $base_url;
+    $source = 'SP webformsync: ' . $webform->title . ', sid: ' . $submission->sid .' (' . $base_url . ')';
 
     // Process spreferal.
     if (!empty($sync_data['sprefer_field']) && !empty($sync_data['sprefer_group'])) {
