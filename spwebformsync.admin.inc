@@ -53,7 +53,7 @@ function spwebformsync_admin_form($form, &$form_state, $form_id = NULL) {
 
     $allowed_types = variable_get('spwebformsync_allowed_component_types', array());
  
-    $data_names = spcivipush_get_data_names();
+    $data_names = spwebformsync_civi_fields();
     $webform_components = spwebformsync_get_webform_allowed_components($webform_default, $allowed_types);
     if (!empty($webform_components)) {
 
@@ -112,6 +112,23 @@ function spwebformsync_admin_form($form, &$form_state, $form_id = NULL) {
         }
       }
 
+
+      // Add note selection.
+      // -----------------------------------------------------------------
+      $form['note_select'] = array(
+        '#type' => 'fieldset',
+        '#title' => 'Notitie.',
+        '#collapsible' => TRUE, 
+        '#collapsed' => TRUE,
+      );
+
+      $form['note_select']['note_fields'] = array(
+        '#type' => 'select',
+        '#title' => 'Notitie velden.',
+        '#options' => $webform_component_select_options, 
+        '#multiple' => TRUE,
+        '#empty_option' => '- Geen -',
+      );
 
       // Add group selection.
       // -----------------------------------------------------------------
@@ -993,7 +1010,7 @@ function spwebformsync_group_autocomplete($string) {
 function spwebformsync_overview() {
   $sync_data = variable_get('spwebformsync_sync_data', array());
   if (!empty($sync_data)) {
-    $data_names = spcivipush_get_data_names();
+    $data_names = spwebformsync_civi_fields();
     $markup = '<table><tr><th>Webformulier</th><th>Webformulier &#8594; Civicrm</th><th>Vaste groepen</th><th>Variabele groepselecties</th><th>Cron wachtrij</th><th></th></tr>';
     foreach ($sync_data as $data) {
       $form = node_load($data['webform']);

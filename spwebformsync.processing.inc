@@ -17,16 +17,20 @@ function spwebformsync_process_submission($submission) {
     $webform = node_load($sync_data['webform']);
     $site_name = variable_get('site_name');
     global $base_url;
-    $source = 'SP webformsync: ' . $webform->title . ', sid: ' . $submission->sid .' (' . $base_url . ')';
+    $parsed_url = parse_url($base_url);
+    $source = 'Form: ' . $webform->title . ' (id: ' . $webform->nid . ', sid: ' . $submission->sid .', ' . $parsed_url['host'] . ')';
 
     // Process spreferal.
     if (!empty($sync_data['sprefer_field']) && !empty($sync_data['sprefer_group'])) {
       $error = FALSE;
       // Process SP Referal.
       $referal_id = $submission->data[$sync_data['sprefer_field']][0];
-      $data = array('contact_id' => $referal_id);
+      $data = array(
+        'contact_id' => $referal_id,
+        'source' => $source,
+      );
       $groups = array($sync_data['sprefer_group'] => $sync_data['sprefer_group']);
-      $result = spcivipush_push_contact($data, $groups, $submission, $source);
+      $result = spcivipush_push_contact($data, $groups, $submission);
       if ($result === FALSE) {
         spwebformsync_push_contact_process_result($result, $submission, $sync_data); 
         watchdog('spwebformsync', 'Processed submission nr. ' . $submission->sid);
@@ -37,10 +41,12 @@ function spwebformsync_process_submission($submission) {
     // Process contact data.
     // Parse data.
     $data = spwebformsync_parse_submission($submission, $sync_data);
+    $data['overwrite'] = empty($sync_data['overwrite']['overwrite']) ? FALSE : TRUE;
+    $data['source'] = $source;
     // Parse groups.
     $groups = spwebformsync_parse_groups($submission, $sync_data);
     // Sync submission to CiviCRM.
-    $result = spcivipush_push_contact($data, $groups, $submission, $source);
+    $result = spcivipush_push_contact($data, $groups, $submission);
     $error = spwebformsync_push_contact_process_result($result, $submission, $sync_data); 
     if (!$error) {
       $contact_id = $result;
@@ -56,7 +62,7 @@ function spwebformsync_process_submission($submission) {
  */
 function spwebformsync_parse_submission($submission, $sync_data) {
   $data = array();
-  $sync_items = spcivipush_get_data_names(); 
+  $sync_items = spwebformsync_civi_fields(); 
   foreach ($sync_items as $key => $name) {
     $var = '';
     if (!empty($sync_data[$key . '_component'])) {
@@ -79,7 +85,6 @@ function spwebformsync_parse_submission($submission, $sync_data) {
       }
     }
   }
-  $data['overwrite'] = empty($sync_data['overwrite']['overwrite']) ? FALSE : TRUE;
   return $data;
 }
 
@@ -472,4 +477,23 @@ function spwebformsync_get_afdeling($afdeling_id) {
       return array_pop($afdeling_items);
     }
   } 
+}
+
+function spwebformsync_civi_fields() {
+  $data_names = array(
+    'contact_id' => 'Contact id',
+    'name' => 'gehele naam',
+    'first_name' => 'voornaam',
+    'middle_name' => 'tussenvoegsel',
+    'last_name' => 'achternaam',
+    'email' => 'e-mail',
+    'telephone' => 'telefoon',
+    'street' => 'straat',
+    'house_number' => 'huisnummer (inc. toevoeging)',
+    'house_number_addition' => 'huisnummer toevoeging',
+    'street_and_number' => 'straat en huisnummer',
+    'postal_code' => 'postcode',
+    'locality' => 'plaats',
+  );
+  return $data_names;
 }
