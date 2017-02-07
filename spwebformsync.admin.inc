@@ -138,6 +138,27 @@ function spwebformsync_admin_form($form, &$form_state, $form_id = NULL) {
         '#default_value' => $default_value,
       );
 
+      if (empty($sync_data[$webform->nid]['note_use'])) {
+        $default_value = array();
+      }
+      else {
+        $default_value = $sync_data[$webform->nid]['note_use'];
+        $form['note_select']['#collapsed'] = FALSE;
+      }
+      $note_use_options = array(
+        'intern' => 'Intern',
+        'telefoongesprek' => 'Telefoongesprek',
+        'algemeen' => 'Algemeen',
+      );
+      $form['note_select']['note_use'] = array(
+        '#type' => 'select',
+        '#title' => 'Notitie gebruik',
+        '#options' => $note_use_options, 
+        '#multiple' => TRUE,
+        '#empty_option' => '- Geen -',
+        '#default_value' => $default_value,
+      );
+
 
       // Add group selection.
       // -----------------------------------------------------------------
@@ -753,6 +774,7 @@ function spwebformsync_admin_form_submit($form, &$form_state) {
     'fixed_mail_sender_emailadress',
     'sprefer_field',
     'note_fields',
+    'note_use',
   );
   $storage_values = array(
     'selected_fixed_groups',

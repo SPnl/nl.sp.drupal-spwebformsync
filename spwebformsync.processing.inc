@@ -40,10 +40,18 @@ function spwebformsync_process_submission($submission) {
     }
 
     // Process contact data.
-    // Parse data.
+    // Parse autosync data.
     $data = spwebformsync_parse_submission($submission, $sync_data);
+
+    // Parse other data.
     $data['overwrite'] = empty($sync_data['overwrite']['overwrite']) ? FALSE : TRUE;
     $data['source'] = $source;
+    foreach ($sync_data['note_fields'] as $component_id) {
+      $data['note_content'][] = array_pop($submission->data[$component_id]);
+    }
+    $data['note_use'] = empty($sync_data['note_use']) ? array() : $sync_data['note_use'];
+    global $user;
+    $data['author'] = $user->name;
 
     // Parse groups.
     $groups = spwebformsync_parse_groups($submission, $sync_data);
