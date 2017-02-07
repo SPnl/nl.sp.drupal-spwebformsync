@@ -121,6 +121,13 @@ function spwebformsync_admin_form($form, &$form_state, $form_id = NULL) {
         '#collapsible' => TRUE, 
         '#collapsed' => TRUE,
       );
+      if (empty($sync_data[$webform->nid]['note_fields'])) {
+        $default_value = array();
+      }
+      else {
+        $default_value = $sync_data[$webform->nid]['note_fields'];
+        $form['note_select']['#collapsed'] = FALSE;
+      }
 
       $form['note_select']['note_fields'] = array(
         '#type' => 'select',
@@ -128,7 +135,9 @@ function spwebformsync_admin_form($form, &$form_state, $form_id = NULL) {
         '#options' => $webform_component_select_options, 
         '#multiple' => TRUE,
         '#empty_option' => '- Geen -',
+        '#default_value' => $default_value,
       );
+
 
       // Add group selection.
       // -----------------------------------------------------------------
@@ -743,6 +752,7 @@ function spwebformsync_admin_form_submit($form, &$form_state) {
     'fixed_mail_subject',
     'fixed_mail_sender_emailadress',
     'sprefer_field',
+    'note_fields',
   );
   $storage_values = array(
     'selected_fixed_groups',

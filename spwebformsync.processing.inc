@@ -30,7 +30,8 @@ function spwebformsync_process_submission($submission) {
         'source' => $source,
       );
       $groups = array($sync_data['sprefer_group'] => $sync_data['sprefer_group']);
-      $result = spcivipush_push_contact($data, $groups, $submission);
+      $data['groups'] = $groups;
+      $result = spcivipush_push_contact($data, $submission);
       if ($result === FALSE) {
         spwebformsync_push_contact_process_result($result, $submission, $sync_data); 
         watchdog('spwebformsync', 'Processed submission nr. ' . $submission->sid);
@@ -43,10 +44,13 @@ function spwebformsync_process_submission($submission) {
     $data = spwebformsync_parse_submission($submission, $sync_data);
     $data['overwrite'] = empty($sync_data['overwrite']['overwrite']) ? FALSE : TRUE;
     $data['source'] = $source;
+
     // Parse groups.
     $groups = spwebformsync_parse_groups($submission, $sync_data);
+    $data['groups'] = $groups;
+
     // Sync submission to CiviCRM.
-    $result = spcivipush_push_contact($data, $groups, $submission);
+    $result = spcivipush_push_contact($data, $submission);
     $error = spwebformsync_push_contact_process_result($result, $submission, $sync_data); 
     if (!$error) {
       $contact_id = $result;
