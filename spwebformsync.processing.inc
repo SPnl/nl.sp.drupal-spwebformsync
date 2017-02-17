@@ -55,17 +55,27 @@ function spwebformsync_process_submission($submission) {
       $note_use = array();
       if (count($note_data['note_fields']) > 1) {
         foreach ($note_data['note_fields'] as $component_id) {
-          $field_content = check_markup(reset($submission->data[$component_id]), 'filtered_html');
-          if (!empty($field_content)) {
-            $note_content .=  '<div class="note_content">' . $field_content . '</div>';
+          if (!empty($submission->data[$component_id])) {
+            $submitted_data = $submission->data[$component_id];
+            if (!empty($submitted_data)) {
+              $field_content = check_markup(reset($submitted_data), 'filtered_html');
+              if (!empty($field_content)) {
+                $note_content .=  '<div class="note_content">' . $field_content . '</div>';
+              }
+            }
           }
         }
       }
       else {
         $component_id = array_pop($note_data['note_fields']);
-        $field_content = check_markup(reset($submission->data[$component_id]), 'filtered_html');
-        if (!empty($field_content)) {
-          $note_content = $field_content;
+        if (!empty($submission->data[$component_id])) {
+          $submitted_data = $submission->data[$component_id];
+          if (!empty($submitted_data)) {
+            $field_content = check_markup(reset($submitted_data), 'filtered_html');
+            if (!empty($field_content)) {
+              $note_content = $field_content;
+            }
+          }
         }
       }
       if (!empty($note_content)) {
