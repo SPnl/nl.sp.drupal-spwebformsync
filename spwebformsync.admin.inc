@@ -115,19 +115,44 @@ function spwebformsync_admin_form($form, &$form_state, $form_id = NULL) {
 
       // Add note selection.
       // -----------------------------------------------------------------
+      $note_use_options = array(
+        'intern' => 'Intern',
+        'telefoongesprek' => 'Telefoongesprek',
+        'algemeen' => 'Algemeen',
+      );
+
       $form['note_select'] = array(
         '#type' => 'fieldset',
-        '#title' => 'Notitie.',
+        '#title' => 'Notities.',
         '#collapsible' => TRUE, 
         '#collapsed' => TRUE,
       );
-      if (empty($sync_data[$webform->nid]['note_fields'])) {
-        $default_value = array();
+
+      // Show stored notes.
+      if (!empty($form_state['storage']['notes'])) {
+        $form['note_select']['#collapsed'] = FALSE;
+        $markup = '<p><strong>Geselecteerd:</strong><br/>';
+        foreach ($form_state['storage']['notes'] as $key => $note) {
+          $fieldlist = array();
+          $uselist = array();
+          foreach($note['note_fields'] as $field) {
+            $fieldlist[] = check_plain($webform_component_select_options[$field]);
+          }
+          foreach($note['note_use'] as $note_use) {
+            $uselist[] = check_plain($note_use_options[$note_use]);
+          }
+          $markup .= '<p><strong>Notitie ' . ($key + 1) . '</strong><br/>Velden: ' . implode(', ', $fieldlist) . '<br/>';
+          $markup .= 'Gebruik: ' . implode(', ', $uselist) . '<br/></p>';
+        }
       }
       else {
-        $default_value = $sync_data[$webform->nid]['note_fields'];
-        $form['note_select']['#collapsed'] = FALSE;
+        $markup = '';
       }
+
+      $form['note_select']['selected_notes'] = array(
+        '#type' => 'markup',
+        '#markup' => $markup,
+      );
 
       $form['note_select']['note_fields'] = array(
         '#type' => 'select',
@@ -135,30 +160,35 @@ function spwebformsync_admin_form($form, &$form_state, $form_id = NULL) {
         '#options' => $webform_component_select_options, 
         '#multiple' => TRUE,
         '#empty_option' => '- Geen -',
-        '#default_value' => $default_value,
       );
 
-      if (empty($sync_data[$webform->nid]['note_use'])) {
-        $default_value = array();
-      }
-      else {
-        $default_value = $sync_data[$webform->nid]['note_use'];
-        $form['note_select']['#collapsed'] = FALSE;
-      }
-      $note_use_options = array(
-        'intern' => 'Intern',
-        'telefoongesprek' => 'Telefoongesprek',
-        'algemeen' => 'Algemeen',
-      );
       $form['note_select']['note_use'] = array(
         '#type' => 'select',
         '#title' => 'Notitie gebruik',
         '#options' => $note_use_options, 
         '#multiple' => TRUE,
         '#empty_option' => '- Geen -',
-        '#default_value' => $default_value,
       );
 
+      $form['note_select']['add_note'] = array(
+        '#type' => 'button',
+        '#value' => 'Voeg notitie toe',
+        '#name' => 'add_note',
+        '#ajax' => array(
+          'wrapper' => 'spwebformsync_ajax_form',
+          'callback' => 'spwebformsync_ajax_form_callback',
+        ),
+      );
+
+      $form['note_select']['reset_notes'] = array(
+        '#type' => 'button',
+        '#value' => 'Leeg selectie',
+        '#name' => 'reset_notes',
+        '#ajax' => array(
+          'wrapper' => 'spwebformsync_ajax_form',
+          'callback' => 'spwebformsync_ajax_form_callback',
+        ),
+      );
 
       // Add group selection.
       // -----------------------------------------------------------------
@@ -568,6 +598,24 @@ function spwebformsync_admin_form_validate($form, &$form_state) {
       spwebformsync_store_sync_data($form_state, $webform);
       return;
       break;
+    case 'add_note':
+      // Store selected group.
+      if (!empty($form_state['values']['note_fields'])) {
+        $form_state['storage']['notes'][] = array(
+          'note_fields' => $form_state['values']['note_fields'],
+          'note_use' => $form_state['values']['note_use'],
+        );
+        $form_state['input']['note_fields'] = '';
+        $form_state['input']['note_use'] = '';
+      }
+      $form_state['rebuild'] = TRUE;
+      return;
+      break;
+    case 'reset_notes':
+      unset($storage['notes']);
+      $form_state['rebuild'] = TRUE;
+      return;
+      break;
     case 'reset_fixed_groups':
       unset($storage['selected_fixed_groups']);
       $form_state['rebuild'] = TRUE;
@@ -773,8 +821,6 @@ function spwebformsync_admin_form_submit($form, &$form_state) {
     'fixed_mail_subject',
     'fixed_mail_sender_emailadress',
     'sprefer_field',
-    'note_fields',
-    'note_use',
   );
   $storage_values = array(
     'selected_fixed_groups',
@@ -802,6 +848,9 @@ function spwebformsync_admin_form_submit($form, &$form_state) {
   // Store sprefer group.
   $group = spwebformsync_parse_group_form_select_value($values['sprefer_group']);
   $sync_data[$values['webform']]['sprefer_group'] = $group;
+
+  // Store notes.
+  $sync_data[$values['webform']]['notes'] = $form_state['storage']['notes'];
 
   // Store selected variable group syncs.
   foreach ($values as $key => $value) {
@@ -1110,6 +1159,9 @@ function spwebformsync_store_sync_data(&$form_state, $webform) {
   $storage = &$form_state['storage'];
   if (!empty($webform)) {
     $sync_data = variable_get('spwebformsync_sync_data', array());
+    if (!empty($sync_data[$webform]['notes'])) {
+      $storage['notes'] = $sync_data[$webform]['notes'];
+    }
     if (!empty($sync_data[$webform]['selected_fixed_groups'])) {
       $storage['selected_fixed_groups'] = $sync_data[$webform]['selected_fixed_groups'];
     }

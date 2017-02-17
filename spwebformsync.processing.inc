@@ -18,7 +18,7 @@ function spwebformsync_process_submission($submission) {
     $site_name = variable_get('site_name');
     global $base_url;
     $parsed_url = parse_url($base_url);
-    $source = 'Form: ' . $webform->title . ' (id: ' . $webform->nid . ', sid: ' . $submission->sid .', ' . $parsed_url['host'] . ')';
+    $source = 'Form: ' . substr($webform->title, 0, 16) . ' (id: ' . $webform->nid . ', sid: ' . $submission->sid .', ' . $parsed_url['host'] . ')';
 
     // Process spreferal.
     if (!empty($sync_data['sprefer_field']) && !empty($sync_data['sprefer_group'])) {
@@ -46,12 +46,33 @@ function spwebformsync_process_submission($submission) {
     // Parse other data.
     $data['overwrite'] = empty($sync_data['overwrite']['overwrite']) ? FALSE : TRUE;
     $data['source'] = $source;
-    foreach ($sync_data['note_fields'] as $component_id) {
-      $data['note_content'][] = array_pop($submission->data[$component_id]);
-    }
-    $data['note_use'] = empty($sync_data['note_use']) ? array() : $sync_data['note_use'];
     global $user;
     $data['author'] = $user->name;
+
+    // Notes.
+    foreach ($sync_data['notes'] as $key => $note_data) {
+      $note_content = '';
+      $note_use = array();
+      if (count($note_data['note_fields']) > 1) {
+        foreach ($note_data['note_fields'] as $component_id) {
+          $field_content = check_markup(reset($submission->data[$component_id]), 'filtered_html');
+          if (!empty($field_content)) {
+            $note_content .=  '<div class="note_content">' . $field_content . '</div>';
+          }
+        }
+      }
+      else {
+        $component_id = array_pop($note_data['note_fields']);
+        $field_content = check_markup(reset($submission->data[$component_id]), 'filtered_html');
+        if (!empty($field_content)) {
+          $note_content = $field_content;
+        }
+      }
+      if (!empty($note_content)) {
+        $data['notes'][$key]['note_content'] = $note_content;
+        $data['notes'][$key]['note_use'] = empty($sync_data['note_use']) ? array() : $note_data['note_use'];
+      }
+    }
 
     // Parse groups.
     $groups = spwebformsync_parse_groups($submission, $sync_data);
