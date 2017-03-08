@@ -834,6 +834,9 @@ function spwebformsync_admin_form_submit($form, &$form_state) {
     if (isset($form_state['storage'][$key])) {
       $sync_data[$values['webform']][$key] = $form_state['storage'][$key];
     }
+    else {
+      unset($sync_data[$values['webform']][$key]);
+    }
   }
   // Store selected components to sync with CiviCRM contact data.
   foreach ($values as $key => $value) {
