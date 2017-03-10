@@ -46,41 +46,43 @@ function spwebformsync_process_submission($submission) {
     // Parse other data.
     $data['overwrite'] = empty($sync_data['overwrite']['overwrite']) ? FALSE : TRUE;
     $data['source'] = $source;
-    global $user;
-    $data['author'] = $user->name;
+    $data['author'] = $submission->name;
+    $data['remote_addr'] = $submission->remote_addr;
 
     // Notes.
-    foreach ($sync_data['notes'] as $key => $note_data) {
-      $note_content = '';
-      $note_use = array();
-      if (count($note_data['note_fields']) > 1) {
-        foreach ($note_data['note_fields'] as $component_id) {
+    if (!empty($sync_data['notes'])) {
+      foreach ($sync_data['notes'] as $key => $note_data) {
+        $note_content = '';
+        $note_use = array();
+        if (count($note_data['note_fields']) > 1) {
+          foreach ($note_data['note_fields'] as $component_id) {
+            if (!empty($submission->data[$component_id])) {
+              $submitted_data = $submission->data[$component_id];
+              if (!empty($submitted_data)) {
+                $field_content = check_markup(reset($submitted_data), 'filtered_html');
+                if (!empty($field_content)) {
+                  $note_content .=  '<div class="note_content">' . $field_content . '</div>';
+                }
+              }
+            }
+          }
+        }
+        else {
+          $component_id = array_pop($note_data['note_fields']);
           if (!empty($submission->data[$component_id])) {
             $submitted_data = $submission->data[$component_id];
             if (!empty($submitted_data)) {
               $field_content = check_markup(reset($submitted_data), 'filtered_html');
               if (!empty($field_content)) {
-                $note_content .=  '<div class="note_content">' . $field_content . '</div>';
+                $note_content = $field_content;
               }
             }
           }
         }
-      }
-      else {
-        $component_id = array_pop($note_data['note_fields']);
-        if (!empty($submission->data[$component_id])) {
-          $submitted_data = $submission->data[$component_id];
-          if (!empty($submitted_data)) {
-            $field_content = check_markup(reset($submitted_data), 'filtered_html');
-            if (!empty($field_content)) {
-              $note_content = $field_content;
-            }
-          }
+        if (!empty($note_content)) {
+          $data['notes'][$key]['note_content'] = $note_content;
+          $data['notes'][$key]['note_use'] = empty($sync_data['note_use']) ? array() : $note_data['note_use'];
         }
-      }
-      if (!empty($note_content)) {
-        $data['notes'][$key]['note_content'] = $note_content;
-        $data['notes'][$key]['note_use'] = empty($sync_data['note_use']) ? array() : $note_data['note_use'];
       }
     }
 
