@@ -31,6 +31,7 @@ function spwebformsync_process_submission($submission) {
       );
       $groups = array($sync_data['sprefer_group'] => $sync_data['sprefer_group']);
       $data['groups'] = $groups;
+
       $result = spcivipush_push_contact($data, $submission);
       if ($result === FALSE) {
         spwebformsync_push_contact_process_result($result, $submission, $sync_data); 
@@ -81,7 +82,7 @@ function spwebformsync_process_submission($submission) {
         }
         if (!empty($note_content)) {
           $data['notes'][$key]['note_content'] = $note_content;
-          $data['notes'][$key]['note_use'] = empty($sync_data['note_use']) ? array() : $note_data['note_use'];
+          $data['notes'][$key]['note_use'] = empty($note_data['note_use']) ? array() : $note_data['note_use'];
         }
       }
     }
@@ -91,6 +92,7 @@ function spwebformsync_process_submission($submission) {
     $data['groups'] = $groups;
 
     // Sync submission to CiviCRM.
+
     $result = spcivipush_push_contact($data, $submission);
     $error = spwebformsync_push_contact_process_result($result, $submission, $sync_data); 
     if (!$error) {
@@ -99,6 +101,7 @@ function spwebformsync_process_submission($submission) {
       spwebformsync_send_mails($contact_id, $sync_data, $submission);
     }
     watchdog('spwebformsync', 'Processed submission nr. '.$submission->sid);
+
   }
 }
 
