@@ -98,7 +98,7 @@ function spwebformsync_process_submission($submission) {
     if (!$error) {
       $contact_id = $result;
       spwebformsync_store_submission_sync_state($submission->nid, $submission->sid, 'synced');
-      spwebformsync_send_mails($contact_id, $sync_data, $submission);
+      spwebformsync_send_mails($contact_id, $sync_data, $submission, $webform);
     }
     watchdog('spwebformsync', 'Processed submission nr. '.$submission->sid);
 
@@ -347,7 +347,9 @@ function spwebformsync_check_address_manually($street_and_number, $contact_id) {
   }
 }
 
-function spwebformsync_send_mails($contact_id, $sync_data, $submission) {
+function spwebformsync_send_mails($contact_id, $sync_data, $submission, $webform) {
+  $allowed_types = variable_get('spwebformsync_allowed_component_types', array());
+  $webform_components = spwebformsync_get_webform_allowed_components($webform->nid, $allowed_types);
   if (!empty($sync_data)) {
     if (
       !empty($sync_data['fixed_mail_text']['value']) ||
@@ -383,7 +385,7 @@ function spwebformsync_send_mails($contact_id, $sync_data, $submission) {
                 $text = check_markup($text_raw, $filter_format);
                 $subject .= $sync_data['fixed_mail_subject'];
                 $mailfrom = $sync_data['fixed_mail_sender_emailadress'];
-                spwebformsync_send_mail($contact_data, $subject, $text, $mailto, $mailfrom);
+                spwebformsync_send_mail($contact_data, $submission, $webform, $subject, $text, $mailto, $mailfrom);
               }
             }
           }
@@ -435,7 +437,7 @@ function spwebformsync_send_mails($contact_id, $sync_data, $submission) {
                       $text = check_markup($text_raw, $filter_format);
                       $subject .= $data['subject'];
                       $mailfrom = $data['sender'];
-                      spwebformsync_send_mail($contact_data, $subject, $text, $mailto, $mailfrom);
+                      spwebformsync_send_mail($contact_data, $submission, $webform, $subject, $text, $mailto, $mailfrom);
                     }
                   }
                 }
@@ -448,7 +450,39 @@ function spwebformsync_send_mails($contact_id, $sync_data, $submission) {
   }
 }
 
-function spwebformsync_send_mail($contact_data, $subject, $text, $mailto, $mailfrom) {
+function spwebformsync_replace_tokens($contact_data, $submission, $webform, $raw_text) {
+  $matches = array();
+  $text = $raw_text;
+  $token_components = spwebformsync_filter_token_components($webform->webform['components']);
+  if (preg_match_all('/\[([^]\s]+)\]/', $raw_text, $matches)) {
+    foreach ($matches[1] as $key => $pattern_match) {
+      // Replace contact data in raw text.
+      if (!empty($contact_data[$matches[1][$key]])) {
+        $text = str_replace($matches[0][$key], check_plain($contact_data[$matches[1][$key]]), $text);
+      }
+      // Replace component tokens in raw text.
+      if (!empty($token_components)) {
+        foreach ($token_components as $token_component) {
+          $items_parsed = array();
+          if ($matches[1][$key] == $token_component['form_key']) {
+            $mapping = spwebformsync_parse_webform_select_options($webform, $token_component['cid']);
+            $items = $submission->data[$token_component['cid']];
+            foreach ($items as $item) {
+              $item_parsed = isset($mapping[$item]) ? $mapping[$item] : $item;
+              $items_parsed[] = $item_parsed;
+            }
+            $line = join(' en ', array_filter(array_merge(array(join(', ', array_slice($items_parsed, 0, -1))), array_slice($items_parsed, -1)), 'strlen'));
+            $text = str_replace($matches[0][$key], check_plain($line), $text);
+          }
+        }
+      }
+
+    }
+  }
+  return $text;
+}
+
+function spwebformsync_send_mail($contact_data, $submission, $webform, $subject, $text, $mailto, $mailfrom) {
   $site_mail = variable_get('site_mail', ini_get('sendmail_from'));
   if (empty($mailfrom)) $mailfrom = $site_mail;
   if (!empty($mailfrom)) {
@@ -458,21 +492,12 @@ function spwebformsync_send_mail($contact_data, $subject, $text, $mailto, $mailf
       'text' => $text,
     );
     foreach ($raw_texts as $text_key => $raw_text) {
-      $matches = array();
-      // Replace contact data in raw text.
-      if (preg_match_all('/\[([^]\s]+)\]/', $raw_text, $matches)) {
-        foreach ($matches[1] as $key => $pattern_match) {
-          if (!empty($contact_data[$matches[1][$key]])) {
-            $raw_text = str_replace($matches[0][$key], check_plain($contact_data[$matches[1][$key]]), $raw_text);
-          }
-        }
-        $$text_key = $raw_text;
-      }
+      $$text_key = spwebformsync_replace_tokens($contact_data, $submission, $webform, $raw_text);
     }
     // Send mail
     $params = array(
-      'text' => $text,
       'subject' => $subject,
+      'text' => $text,
     );
     $message = drupal_mail('spwebformsync', 'sync_mail', $mailto, language_default(), $params, $mailfrom);
     // Process result.

@@ -134,8 +134,41 @@ function spwebformsync_get_components_list($webform_components) {
       }
     }
     else {
-      $list[$component_id] = $component['name'];
+      $list[$component_id] = substr($component['name'], 0, 40);
     }
   }
   return $list;
+}
+
+function spwebformsync_filter_token_components($components) {
+  $filtered_components = array();
+  $exclude = array('valid_test', 'call_answered', 'target_available', 'not_available_today', 'call_appointment', 'caller_message');
+  foreach ($components as $id => $component) {
+    if (strpos($component['form_key'], 'spbellen_') === false && in_array($component['type'], array('textfield', 'textarea', 'select')) && !in_array($component['form_key'], $exclude)) {
+      $filtered_components[$id] = $component;
+    }
+  }
+  return $filtered_components;
+}
+
+function spwebformsync_get_component_tokens($components) {
+  $tokens = array();
+  $filtered_components = spwebformsync_filter_token_components($components);
+  if (!empty($filtered_components)) {
+    foreach ($filtered_components as $component) {
+      $tokens[] = '[' . $component['form_key'] . ']';
+    }
+  }
+  return $tokens;
+}
+
+function spwebformsync_get_tokens_text($components) {
+  $tokens_text = '<strong>Let op!</strong> Het is mogelijk om CiviCRM contact veldwaarden in de mail en het onderwerp te gebruiken door de veldnaam tussen vierkante haken te plaatsen. Onder andere [contact_id], [first_name], [middle_name], [last_name], [display_name], [email], [phone], [mobile], [afdeling] en [afdeling_code].';
+  $tokens = spwebformsync_get_component_tokens($components);
+  if (!empty($tokens)) {
+    $tokens_text .= '<br/>Daarnaast zijn er de volgende tokens die worden vervangen door de ingevulde veldwaarden: ';
+    $tokens_text .= join(' en ', array_filter(array_merge(array(join(', ', array_slice($tokens, 0, -1))), array_slice($tokens, -1)), 'strlen'));
+    $tokens_text .= '.';
+  }
+  return $tokens_text;
 }

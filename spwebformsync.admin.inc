@@ -367,10 +367,11 @@ function spwebformsync_admin_form($form, &$form_state, $form_id = NULL) {
 
       // Fixed mail.
       // --------------------------------------------------------------------
+      $tokens_text = spwebformsync_get_tokens_text($webform_components);
       $form['fixed_mail'] = array(
         '#type' => 'fieldset', 
         '#title' => 'E-mail naar contact: altijd',
-          '#description' => '<strong>Let op!</strong> Het is mogelijk om CiviCRM contact veldwaarden in de mail en het onderwerp te gebruiken door de veldnaam tussen vierkante haken te plaatsen. Onder andere [contact_id], [first_name], [middle_name], [last_name], [display_name], [email], [phone], [mobile], [afdeling] en [afdeling_code].',
+        '#description' => $tokens_text,
         '#collapsible' => TRUE, 
         '#collapsed' => TRUE,
       );
@@ -439,7 +440,7 @@ function spwebformsync_admin_form($form, &$form_state, $form_id = NULL) {
       foreach ($types as $type) {
         $form[$type . '_mail'] = array(
           '#type' => 'fieldset', 
-          '#description' => '<strong>Let op!</strong> Het is mogelijk om CiviCRM contact veldwaarden in de mail en het onderwerp te gebruiken door de veldnaam tussen vierkante haken te plaatsen. Onder andere [contact_id], [first_name], [middle_name], [last_name], [display_name], [email], [phone], [mobile], [afdeling] en [afdeling_code].',
+          '#description' => $tokens_text,
           '#collapsible' => TRUE, 
           '#collapsed' => TRUE,
         );
@@ -853,7 +854,7 @@ function spwebformsync_admin_form_submit($form, &$form_state) {
   $sync_data[$values['webform']]['sprefer_group'] = $group;
 
   // Store notes.
-  $sync_data[$values['webform']]['notes'] = $form_state['storage']['notes'];
+  $sync_data[$values['webform']]['notes'] = empty($form_state['storage']['notes']) ? array() : $form_state['storage']['notes'];
 
   // Store selected variable group syncs.
   foreach ($values as $key => $value) {
