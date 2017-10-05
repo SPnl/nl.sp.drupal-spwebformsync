@@ -753,7 +753,7 @@ function spwebformsync_admin_form_validate($form, &$form_state) {
         }
         if (!valid_email_address($values[$sender_address_field])) {
           $send = FALSE;
-          form_set_error($test_address_field, 'Vul een geldig e-mailadres in.');
+          form_set_error($sender_address_field, 'Vul een geldig e-mailadres in.');
         }
         if (!valid_email_address($values[$test_address_field])) {
           $send = FALSE;
