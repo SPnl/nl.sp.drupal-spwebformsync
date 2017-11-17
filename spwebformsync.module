@@ -184,9 +184,11 @@ function spwebformsync_options_key_validate($form, &$form_state) {
     $values = $form_state['values'];
     if ($values['type'] = 'select') {
       foreach(preg_split("/((\r?\n)|(\r\n?))/", $values['extra']['items']) as $line){
-        if (!preg_match('/^[a-z_]+\|.+$/', $line)) {
-          form_set_error('edit-extra-items', 'Gebruik alleen kleine letters en underscores in de sleutelwaarden van opties');
-          break;
+        if (!empty($line)) {
+          if (!preg_match('/^[a-z_]+\|.+$/', $line)) {
+            form_set_error('edit-extra-items', 'Gebruik alleen kleine letters en underscores in de sleutelwaarden van opties. (Kies handmatige invoer van sleutel|waarde paren.');
+            break;
+          }
         }
       }
     }
