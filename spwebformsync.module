@@ -68,6 +68,14 @@ function spwebformsync_menu() {
     'file' => 'spwebformsync.admin.inc',
   );
 
+  $cron_key = variable_get('cron_key');
+  $items['spwebformsynccron/' . $cron_key] = array(
+    'title' => 'Webformsync cron',
+    'type' => MENU_CALLBACK,
+    'page callback' => 'spwebformsync_customcron',
+    'access arguments' => array('access content'),
+  );
+
   return $items;
 }
 
@@ -118,13 +126,12 @@ function spwebformsync_webform_submission_delete($node, $submission) {
 }
 
 /*
- * Implements hook_cron().
- *
  * Syncs not yet synced webform submissions.
  */
-function spwebformsync_cron() {
+function spwebformsync_customcron() {
   $sync_type = variable_get('spwebformsync_sync_type'); 
   if ($sync_type == 'cron') {
+    set_time_limit(120);
     spwebformsync_sync();
   }
 }
