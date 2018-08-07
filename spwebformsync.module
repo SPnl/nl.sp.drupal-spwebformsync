@@ -132,7 +132,9 @@ function spwebformsync_customcron() {
   $sync_type = variable_get('spwebformsync_sync_type'); 
   if ($sync_type == 'cron') {
     set_time_limit(120);
+    watchdog('spwebformsync', 'Custom cron sync started.');
     spwebformsync_sync();
+    watchdog('spwebformsync', 'Custom cron sync ended.');
   }
 }
 

@@ -87,7 +87,7 @@ function spwebformsync_get_civi_groups($sync = TRUE) {
             drupal_set_message('Error syncing civicrm groups, using saved data.', 'warning');
           }
         }
-      } 
+      }
       $groups = variable_get('spwebformsync_civi_groups', array());
       cache_set('spwebformsync_civi_groups', $groups, 'cache', time() + 3600);
     }
@@ -125,16 +125,32 @@ function spwebformsync_parse_group_form_select_value($group_raw) {
 function spwebformsync_get_components_list($webform_components) {
   $list = array();
   foreach ($webform_components as $component_id => $component) {
-    if ($component['type'] === 'sp_address_auto') {
-      // Replace with fields.
-      $elements = webform_component_invoke('sp_address_auto', 'render', $component);
-      foreach ($elements as $element_id => $element) {
-        if (strpos($element_id, '#') === 0) continue;
-        $list[$component_id . '|' . $element_id] = $component['name'] . ': ' . $element['#title'];
-      }
-    }
-    else {
-      $list[$component_id] = substr($component['name'], 0, 40);
+    switch ($component['type']) {
+      case 'sp_address_auto':
+        // Replace with fields.
+        $elements = webform_component_invoke('sp_address_auto', 'render', $component);
+        foreach ($elements as $element_id => $element) {
+          if (strpos($element_id, '#') === 0) {
+            continue;
+          }
+          $list[$component_id . '|' . $element_id] = $component['name'] . ': ' . $element['#title'];
+        }
+        break;
+
+      case 'spaddresscomp':
+        // Replace with fields.
+        $elements = webform_component_invoke('spaddresscomp', 'render', $component);
+        foreach ($elements as $element_id => $element) {
+          if (strpos($element_id, '#') === 0) {
+            continue;
+          }
+          $list[$component_id . '|' . $element_id] = $component['name'] . ': ' . $element['#title'];
+        }
+        break;
+
+      default:
+        $list[$component_id] = substr($component['name'], 0, 40);
+        break;
     }
   }
   return $list;
