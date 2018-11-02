@@ -6,6 +6,9 @@
  */
 
 function spwebformsync_process_submission($submission) {
+  // Get target for sync data (sp datadrop server or civicrm).
+  $target = variable_get('spwebformsync_sync_target', 'civicrm');
+
   $sync_data_all = variable_get('spwebformsync_sync_data', array());
   // Check if there is a spwebformsync for this webform.
   if (isset($sync_data_all[$submission->nid])) {
@@ -19,6 +22,12 @@ function spwebformsync_process_submission($submission) {
     global $base_url;
     $parsed_url = parse_url($base_url);
     $source = 'Form: ' . substr($webform->title, 0, 16) . ' (id: ' . $webform->nid . ', sid: ' . $submission->sid .', ' . $parsed_url['host'] . ')';
+    $source_data = array(
+      'source_domain' => $parsed_url['host'],
+      'source_title' => $webform->title,
+      'source_id' => $webform->nid,
+      'submission_id' => $submission->sid,
+    );
 
     // Process spreferal.
     if (!empty($sync_data['sprefer_field']) && !empty($sync_data['sprefer_group'])) {
@@ -32,9 +41,22 @@ function spwebformsync_process_submission($submission) {
       $groups = array($sync_data['sprefer_group'] => $sync_data['sprefer_group']);
       $data['groups'] = $groups;
 
-      $result = spcivipush_push_contact($data, $submission);
+      switch ($target) {
+        case 'civicrm':
+        $result = spcivipush_push_contact($data, $submission);
+        break;
+
+        case 'datadrop':
+        $result = spwebformsync_datadrop($data, $submission, $source_data);
+        break;
+      }
       if ($result === FALSE) {
-        spwebformsync_push_contact_process_result($result, $submission, $sync_data); 
+        spwebformsync_store_submission_sync_state($submission->nid, $submission->sid, 'error');
+        watchdog('spwebformsync', 'Processed submission nr. ' . $submission->sid);
+        return;
+      }
+      elseif ($result === 'contact id not found') {
+        spwebformsync_store_submission_sync_state($submission->nid, $submission->sid, 'contact id not found');
         watchdog('spwebformsync', 'Processed submission nr. ' . $submission->sid);
         return;
       }
@@ -93,15 +115,16 @@ function spwebformsync_process_submission($submission) {
 
     // Sync submission to CiviCRM.
 
-    $result = spcivipush_push_contact($data, $submission);
-    $error = spwebformsync_push_contact_process_result($result, $submission, $sync_data); 
-    if (!$error) {
-      $contact_id = $result;
-      spwebformsync_store_submission_sync_state($submission->nid, $submission->sid, 'synced');
-      spwebformsync_send_mails($contact_id, $sync_data, $submission, $webform);
-    }
-    watchdog('spwebformsync', 'Processed submission nr. '.$submission->sid);
+    switch ($target) {
+      case 'civicrm':
+        $result = spcivipush_push_contact($data, $submission);
+        break;
 
+      case 'datadrop':
+        $result = spwebformsync_datadrop($data, $submission, $source_data);
+        break;
+    }
+    spwebformsync_push_contact_process_result($result, $submission, $sync_data, $webform);
   }
 }
 
@@ -110,7 +133,7 @@ function spwebformsync_process_submission($submission) {
  */
 function spwebformsync_parse_submission($submission, $sync_data) {
   $data = array();
-  $sync_items = spwebformsync_civi_fields(); 
+  $sync_items = spwebformsync_civi_fields();
   foreach ($sync_items as $key => $name) {
     $var = '';
     if (!empty($sync_data[$key . '_component'])) {
@@ -333,7 +356,7 @@ function spwebformsync_check_address_manually($street_and_number, $contact_id) {
             'street_and_number' => $street_and_number,
           );
           $message = drupal_mail('spwebformsync', 'check_address', $check_address_email.',tdgraaff@sp.nl', language_default(), $params, 'webmaster@sp.nl');
-          if (!empty($message['result'])) { 
+          if (!empty($message['result'])) {
             watchdog('spwebformsync', 'Contact controle huisnummer toevoeging, mail verzonden.');
             drupal_set_message('Contact controle huisnummer toevoeging, mail verzonden.');
           }
@@ -366,7 +389,7 @@ function spwebformsync_send_mails($contact_id, $sync_data, $submission, $webform
       $debug_info = 'Getting contact to send mail. Submission id: ' . $submission->sid;
       if (_spcivipush_check_result($get_contact_results, 'contacten', 'get', $params, $debug_info)) {
         if (!empty($get_contact_results['values'])) {
-          $contact_data = array_pop($get_contact_results['values']); 
+          $contact_data = array_pop($get_contact_results['values']);
 
           if (!empty($contact_data['email'])) {
             // Send fixed mail.
@@ -517,7 +540,7 @@ function spwebformsync_send_mail($contact_data, $submission, $webform, $subject,
   }
 }
 
-function spwebformsync_push_contact_process_result($result, $submission, $sync_data) {
+function spwebformsync_push_contact_process_result($result, $submission, $sync_data, $webform) {
   $error = FALSE;
   if ($result === FALSE) {
     spwebformsync_store_submission_sync_state($submission->nid, $submission->sid, 'error');
@@ -531,6 +554,12 @@ function spwebformsync_push_contact_process_result($result, $submission, $sync_d
     spwebformsync_store_submission_sync_state($submission->nid, $submission->sid, 'contact id not found');
     $error = TRUE;
   }
+  else {
+    $contact_id = $result;
+    spwebformsync_store_submission_sync_state($submission->nid, $submission->sid, 'synced');
+    spwebformsync_send_mails($contact_id, $sync_data, $submission, $webform);
+  }
+  watchdog('spwebformsync', 'Processed submission nr. '.$submission->sid);
   return $error;
 }
 
@@ -549,7 +578,7 @@ function spwebformsync_get_afdeling($afdeling_id) {
     if (!empty($afdeling_items)) {
       return array_pop($afdeling_items);
     }
-  } 
+  }
 }
 
 function spwebformsync_civi_fields() {
@@ -569,4 +598,95 @@ function spwebformsync_civi_fields() {
     'locality' => 'plaats',
   );
   return $data_names;
+}
+
+/**
+ * Push contact to datadrop.
+ *
+ * data: array()
+ *   keys:
+ *     - contact_id
+ *     - name
+ *     - first_name
+ *     - middle_name
+ *     - last_name
+ *     - initials
+ *     - birth_date (1974-01-28)
+ *     - gender (m,v,a)
+ *     - email
+ *     - telephone
+ *     - phone_mobile
+ *     - street
+ *     - house_number
+ *     - house_number_addition
+ *     - street_and_number
+ *     - postal_code
+ *     - locality
+ *     - country (NL)
+ *     - notes: array(
+ *         array(
+ *           note_content,
+ *           note_use: array(
+ *             intern
+ *           )
+ *         )
+ *         array(
+ *           note_content
+ *           note_use: array(
+ *           )
+ *         )
+ *         ...
+ *       )
+ *     - overwrite
+ *     - author
+ *     - source
+ *     - groups: array(group_id_1, group_id_2, etc.)
+ *
+ *
+ * debug_info: variable content shown in logs.
+ *
+ */
+function spwebformsync_datadrop($data, $debug_info, $source_data) {
+  if (
+    // Check if testing.
+    (!empty($data['name']) && strpos(strtolower($data['name']), '-test') !== FALSE) ||
+    (!empty($data['first_name']) && strpos(strtolower($data['first_name']), '-test') !== FALSE) ||
+    (!empty($data['last_name']) && strpos(strtolower($data['last_name']), '-test') !== FALSE)
+  ) {
+    drupal_set_message('Test data, not sending to CiviCRM');
+    return 'insufficient data';
+  }
+
+  // Send data to datadrop server.
+  $url = variable_get('spwebformsync_datadrop_server') . '/spdatadrop';
+  $secret = variable_get('spwebformsync_datadrop_secret');
+  $data_to_send = array(
+    'submission_data' => $data,
+    'source_data' => $source_data,
+    'debug_info' => $debug_info,
+    'secret' => $secret,
+  );
+  $request_body = http_build_query($data_to_send);
+  $headers = array('Content-Type' => 'application/x-www-form-urlencoded');
+  $options = array(
+    'method' => 'POST',
+    'data' => $request_body,
+    'headers' => $headers,
+  );
+  $result = drupal_http_request($url, $options);
+  switch ($result->code) {
+    case '200':
+      watchdog('spwebformsync', 'Pushed data to spdatadrop location');
+      break;
+
+    default:
+      $message_data = array(
+        'url' => $url,
+        'headers' => $headers,
+        'post data' => $options,
+        'result' => $result,
+      );
+      watchdog('spwebformsync', 'Error pushing data to spdatadrop location: <pre>@message_data</pre>', array('@message_data' => print_r($message_data, TRUE)), WATCHDOG_ERROR);
+      return FALSE;
+  }
 }

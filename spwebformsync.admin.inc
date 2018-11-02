@@ -6,7 +6,7 @@ function spwebformsync_admin_form($form, &$form_state, $form_id = NULL) {
   if (!empty((int) $form_id)) {
     $webform_default = (int) $form_id;
     spwebformsync_store_sync_data($form_state, $webform_default);
-  } 
+  }
   else {
     $webform_default = isset($values['webform']) ? $values['webform'] : '';
   }
@@ -52,7 +52,7 @@ function spwebformsync_admin_form($form, &$form_state, $form_id = NULL) {
 
 
     $allowed_types = variable_get('spwebformsync_allowed_component_types', array());
- 
+
     $data_names = spwebformsync_civi_fields();
     $webform_components = spwebformsync_get_webform_allowed_components($webform_default, $allowed_types);
     if (!empty($webform_components)) {
@@ -124,7 +124,7 @@ function spwebformsync_admin_form($form, &$form_state, $form_id = NULL) {
       $form['note_select'] = array(
         '#type' => 'fieldset',
         '#title' => 'Notities.',
-        '#collapsible' => TRUE, 
+        '#collapsible' => TRUE,
         '#collapsed' => TRUE,
       );
 
@@ -157,7 +157,7 @@ function spwebformsync_admin_form($form, &$form_state, $form_id = NULL) {
       $form['note_select']['note_fields'] = array(
         '#type' => 'select',
         '#title' => 'Notitie velden.',
-        '#options' => $webform_component_select_options, 
+        '#options' => $webform_component_select_options,
         '#multiple' => TRUE,
         '#empty_option' => '- Geen -',
       );
@@ -165,7 +165,7 @@ function spwebformsync_admin_form($form, &$form_state, $form_id = NULL) {
       $form['note_select']['note_use'] = array(
         '#type' => 'select',
         '#title' => 'Notitie gebruik',
-        '#options' => $note_use_options, 
+        '#options' => $note_use_options,
         '#multiple' => TRUE,
         '#empty_option' => '- Geen -',
       );
@@ -199,7 +199,7 @@ function spwebformsync_admin_form($form, &$form_state, $form_id = NULL) {
       $form['fixed_group_select'] = array(
         '#type' => 'fieldset',
         '#title' => 'Selecteer CiviCRM groep(en) waar het contact altijd aan moet worden toegevoegd (optioneel)',
-        '#collapsible' => TRUE, 
+        '#collapsible' => TRUE,
         '#collapsed' => TRUE,
       );
       // Show message.
@@ -251,9 +251,9 @@ function spwebformsync_admin_form($form, &$form_state, $form_id = NULL) {
       // Variable group syncs.
       // --------------------------------------------------------------------
       $form['variable_group_select'] = array(
-        '#type' => 'fieldset', 
+        '#type' => 'fieldset',
         '#title' => 'Synchroniseer webformulier selectie veldwaarden naar CiviCRM groepen (optioneel)',
-        '#collapsible' => TRUE, 
+        '#collapsible' => TRUE,
         '#collapsed' => TRUE,
       );
       // Get webform select components.
@@ -318,7 +318,7 @@ function spwebformsync_admin_form($form, &$form_state, $form_id = NULL) {
       }
       else {
         $form['variable_group_select']['variable_group_select_no_components'] = array(
-          '#markup' => '<p>Er zijn geen geschikte webformulier velden (meer) beschikbaar.</p>', 
+          '#markup' => '<p>Er zijn geen geschikte webformulier velden (meer) beschikbaar.</p>',
         );
       }
 
@@ -328,10 +328,10 @@ function spwebformsync_admin_form($form, &$form_state, $form_id = NULL) {
       if (!empty($webform_components)) {
         $webform_component_select_options = spwebformsync_get_components_list($webform_components);
         $form['sprefer_fieldset'] = array(
-          '#type' => 'fieldset', 
+          '#type' => 'fieldset',
           '#title' => 'SP Referal formulier synchronisatie (optioneel)',
           '#description' => 'Selecteer het veld waarin het CiviCRM contactnummer dat in de url van het formulier is meegegeven wordt opgeslagen. Kies vervolgens de groep waar dit contact in CiviCRM moet worden toegevoegd.',
-          '#collapsible' => TRUE, 
+          '#collapsible' => TRUE,
           '#collapsed' => TRUE,
         );
 
@@ -369,10 +369,10 @@ function spwebformsync_admin_form($form, &$form_state, $form_id = NULL) {
       // --------------------------------------------------------------------
       $tokens_text = spwebformsync_get_tokens_text($webform_components);
       $form['fixed_mail'] = array(
-        '#type' => 'fieldset', 
+        '#type' => 'fieldset',
         '#title' => 'E-mail naar contact: altijd',
         '#description' => $tokens_text,
-        '#collapsible' => TRUE, 
+        '#collapsible' => TRUE,
         '#collapsed' => TRUE,
       );
       if (!empty($sync_data[$webform->nid]['fixed_mail_subject'])) {
@@ -439,9 +439,9 @@ function spwebformsync_admin_form($form, &$form_state, $form_id = NULL) {
 
       foreach ($types as $type) {
         $form[$type . '_mail'] = array(
-          '#type' => 'fieldset', 
+          '#type' => 'fieldset',
           '#description' => $tokens_text,
-          '#collapsible' => TRUE, 
+          '#collapsible' => TRUE,
           '#collapsed' => TRUE,
         );
         $form[$type . '_mail']['#title'] = ($type === 'variable') ? 'Email naar contact: antwoordafhankelijk' : 'Email naar afdeling: antwoordafhankelijk';
@@ -562,7 +562,7 @@ function spwebformsync_admin_form($form, &$form_state, $form_id = NULL) {
         }
         else {
           $form[$type . '_mail'][$type . '_mail_no_components'] = array(
-            '#markup' => '<p>Er zijn geen geschikte webformulier velden (meer) beschikbaar.</p>', 
+            '#markup' => '<p>Er zijn geen geschikte webformulier velden (meer) beschikbaar.</p>',
           );
         }
       }
@@ -575,7 +575,7 @@ function spwebformsync_admin_form($form, &$form_state, $form_id = NULL) {
     }
     else {
       $form['no_components'] = array(
-        '#markup' => '<p>Er zijn geen geschikte webformulier velden (meer) beschikbaar. (Zijn de gewenste veldtypes <a href="/admin/config/sp/spwebformsync/settings">geselecteerd</a>?)</p>', 
+        '#markup' => '<p>Er zijn geen geschikte webformulier velden (meer) beschikbaar. (Zijn de gewenste veldtypes <a href="/admin/config/sp/spwebformsync/settings">geselecteerd</a>?)</p>',
       );
     }
 
@@ -916,13 +916,54 @@ function spwebformsync_settings_form($form, &$form_state) {
   if (empty(variable_get('spwebformsync_sync_type', FALSE))) {
     variable_set('spwebformsync_sync_type', 'cron');
   }
+  if (empty(variable_get('spwebformsync_sync_target', FALSE))) {
+    variable_set('spwebformsync_sync_target', 'civicrm');
+  }
   $form['spwebformsync_sync_settings'] = array(
     '#type' => 'fieldset',
-    '#title' => 'Cron instellingen',
+    '#title' => 'Sync instellingen',
   );
+
+  $form['spwebformsync_sync_settings']['spwebformsync_sync_target'] = array(
+    '#type' => 'radios',
+    '#title' => 'Waar wilt u de data heensturen?',
+    '#default_value' => variable_get('spwebformsync_sync_target', array()),
+    '#options' => array('civicrm' => 'Direct naar CiviCRM', 'datadrop' => 'Naar SP datadrop, waar e.e.a. verder verwerkt wordt'),
+    '#required' => TRUE,
+  );
+
+  $form['spwebformsync_sync_settings']['spwebformsync_datadrop_server'] = array(
+    '#type' => 'textfield',
+    '#title' => 'Datadrop server (url)',
+    '#default_value' => variable_get('spwebformsync_datadrop_server', ''),
+    '#states' => array(
+      'visible' => array(
+        ':input[name="spwebformsync_sync_target"]' => array('value' => 'datadrop'),
+      ),
+      'required' => array(
+        ':input[name="spwebformsync_sync_target"]' => array('value' => 'datadrop'),
+      ),
+    ),
+  );
+
+  $form['spwebformsync_sync_settings']['spwebformsync_datadrop_secret'] = array(
+    '#type' => 'textfield',
+    '#title' => 'Geheime sleutel',
+    '#description' => 'This secret must match the secret set in the spdatadrop module on the datadrop server.',
+    '#default_value' => variable_get('spwebformsync_datadrop_secret', ''),
+    '#states' => array(
+      'visible' => array(
+        ':input[name="spwebformsync_sync_target"]' => array('value' => 'datadrop'),
+      ),
+      'required' => array(
+        ':input[name="spwebformsync_sync_target"]' => array('value' => 'datadrop'),
+      ),
+    ),
+  );
+
   $form['spwebformsync_sync_settings']['spwebformsync_sync_type'] = array(
     '#type' => 'radios',
-    '#title' => 'Hoe wilt u contacten synchroniseren?',
+    '#title' => 'Wanneer wilt u contacten synchroniseren?',
     '#default_value' => variable_get('spwebformsync_sync_type', array()),
     '#options' => array('direct' => 'Direct (geen controle bevestiging inzending!)', 'cron' => 'Cron', 'manual' => 'Handmatig'),
     '#required' => TRUE,
