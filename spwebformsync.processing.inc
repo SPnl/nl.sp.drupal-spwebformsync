@@ -84,7 +84,7 @@ function spwebformsync_process_submission($submission) {
               if (!empty($submitted_data)) {
                 $field_content = check_markup(reset($submitted_data), 'filtered_html');
                 if (!empty($field_content)) {
-                  $note_content .=  '<div class="note_content">' . $field_content . '</div>';
+                  $note_content .= '<div class="note_content">' . $field_content . '</div>';
                 }
               }
             }
