@@ -440,7 +440,7 @@ function spwebformsync_send_mails($contact_id, $sync_data, $submission, $webform
                 else {
                   $afdeling = spwebformsync_get_afdeling($contact_data['afdeling_code']);
                   $afdeling_wrapper = entity_metadata_wrapper('node', $afdeling);
-                  if (empty($afdeling_wrapper->afd_email->value())) {
+                  if (!isset($afdeling_wrapper->afd_email) || empty($afdeling_wrapper->afd_email->value())) {
                     $mailto = variable_get('site_mail', ini_get('sendmail_from'));
                     $subject = 'Niet aan afdeling verzonden (e-mailadres afdeling onbekend): ';
                   }
