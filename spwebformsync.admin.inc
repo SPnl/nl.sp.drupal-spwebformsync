@@ -23,7 +23,7 @@ function spwebformsync_admin_form($form, &$form_state, $form_id = NULL) {
   $webforms = spwebformsync_get_webforms();
   if (!empty($webforms)) {
     foreach ($webforms as $webform) {
-      $webform_select_options[$webform->nid] = $webform->title;
+      $webform_select_options[$webform->nid] = $webform->title . ' (' . $webform->nid . ')';
     }
 
     // Create form element.
@@ -410,7 +410,7 @@ function spwebformsync_admin_form($form, &$form_state, $form_id = NULL) {
       $form['fixed_mail']['fixed_mail_sender_emailadress'] = array(
         '#type' => 'textfield',
         '#title' => 'Afzend e-mailadres',
-        '#description' => 'De afzender van de e-mails.',
+        '#description' => 'De afzender van de e-mails (Naam <email@adress.com>).',
         '#default_value' => $default,
       );
 
@@ -500,6 +500,7 @@ function spwebformsync_admin_form($form, &$form_state, $form_id = NULL) {
               $form[$type . '_mail'][$type . '_mail_component_'.$component_key][$type . '_mailfieldset_component_'.$component_key.'_value_'.$key][$type . '_mail_sendermailaddress_component_'.$component_key.'_value_'.$key] = array(
                 '#type' => 'textfield',
                 '#title' => 'Afzender e-mailadres',
+		'#description' => 'Naam <email@adress.com>',
                 '#default_value' => $default,
               );
               if ($type === 'afdeling') {
@@ -660,6 +661,9 @@ function spwebformsync_admin_form_validate($form, &$form_state) {
         $send = FALSE;
         form_set_error('fixed_mail_subject', 'Geef de mail een onderwerp.');
       }
+      /*
+       * Disable email validation, Thomas de Graaff <tdgraaff@sp.nl> should be allowed.
+       *
       if (!valid_email_address($values['fixed_mail_sender_emailadress'])) {
         $send = FALSE;
         form_set_error('fixed_mail_sender_emailadress', 'Vul een geldig e-mailadres in.');
@@ -668,6 +672,7 @@ function spwebformsync_admin_form_validate($form, &$form_state) {
         $send = FALSE;
         form_set_error('fixed_mail_test_emailadress', 'Vul een geldig e-mailadres in.');
       }
+       */
       if ($send) {
         // Send mail
         $site_mail = variable_get('site_mail', ini_get('sendmail_from'));
@@ -751,6 +756,8 @@ function spwebformsync_admin_form_validate($form, &$form_state) {
           $send = FALSE;
           form_set_error($subject_field, 'Geef de mail een onderwerp.');
         }
+	/*
+	 * Disable validation: Thomas de Graaff <tdgraaff@sp.nl> should be allowed.
         if (!valid_email_address($values[$sender_address_field])) {
           $send = FALSE;
           form_set_error($sender_address_field, 'Vul een geldig e-mailadres in.');
@@ -759,6 +766,7 @@ function spwebformsync_admin_form_validate($form, &$form_state) {
           $send = FALSE;
           form_set_error($test_address_field, 'Vul een geldig e-mailadres in.');
         }
+	 */
         if ($send) {
           // Send mail
           $site_mail = variable_get('site_mail', ini_get('sendmail_from'));
