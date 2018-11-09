@@ -1,15 +1,15 @@
 <?php
 
-/**   
+/**
  * Implements hook_init().
- */ 
+ */
 function spwebformsync_init() {
   module_load_include("inc", "spwebformsync", "spwebformsync.form");
   module_load_include("inc", "spwebformsync", "spwebformsync.processing");
   module_load_include("inc", "spwebformsync", "spwebformsync.settings");
   module_load_include("inc", "spwebformsync", "components/spwebformsync.components");
   module_load_include('inc', 'webform', 'includes/webform.submissions');
-}   
+}
 
 /**
  * Implements hook_menu().
@@ -105,7 +105,7 @@ function spwebformsync_node_delete($node) {
  */
 function spwebformsync_webform_submission_insert($node, $submission) {
   $sync_data = variable_get('spwebformsync_sync_data', FALSE);
-  $sync_type = variable_get('spwebformsync_sync_type'); 
+  $sync_type = variable_get('spwebformsync_sync_type');
   if (!empty($sync_data) && isset($sync_data[$node->nid])) {
     $result = spwebformsync_store_submission_sync_state($node->nid, $submission->sid, 'unprocessed');
     if (!$result) watchdog('spwebformsync', 'Error storing submission state in database (sid=' . $submission->sid . ').', array(), WATCHDOG_ERROR);
@@ -129,7 +129,7 @@ function spwebformsync_webform_submission_delete($node, $submission) {
  * Syncs not yet synced webform submissions.
  */
 function spwebformsync_customcron() {
-  $sync_type = variable_get('spwebformsync_sync_type'); 
+  $sync_type = variable_get('spwebformsync_sync_type');
   if ($sync_type == 'cron') {
     set_time_limit(120);
     watchdog('spwebformsync', 'Custom cron sync started.');

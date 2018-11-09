@@ -26,6 +26,7 @@ function spwebformsync_process_submission($submission) {
       'source_domain' => $parsed_url['host'],
       'source_title' => $webform->title,
       'source_id' => $webform->nid,
+      'source_ip' => $submission->remote_addr,
       'submission_id' => $submission->sid,
     );
 
