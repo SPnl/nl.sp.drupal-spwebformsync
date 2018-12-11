@@ -528,12 +528,12 @@ function spwebformsync_send_mail($contact_data, $submission, $webform, $subject,
     if (!empty($message['result'])) {
       // Mail verzonden.
       drupal_set_message('Er is een e-mail verzonden');
-      watchdog('spwebformsync', 'Er is een e-mail verzonden.');
+      watchdog('spwebformsync', 'Er is een e-mail verzonden aan ' . check_plain($mailto) .  '.');
     }
     else {
       // Mail faal.
-      drupal_set_message('Er is iets misgegaan met het verzenden van de e-mail.');
-      watchdog('spwebformsync', 'Er is iets misgegaan bij het verzenden van een e-mail.', WATCHDOG_ERROR);
+      drupal_set_message('Er is iets misgegaan met het verzenden van de e-mail aan ' . check_plain($mailto) .  '.');
+      watchdog('spwebformsync', 'Er is iets misgegaan bij het verzenden van een e-mail aan ' . check_plain($mailto) .  '.', WATCHDOG_ERROR);
     }
   }
   else {
