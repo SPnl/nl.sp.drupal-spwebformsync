@@ -1026,6 +1026,10 @@ function spwebformsync_settings_form($form, &$form_state) {
   );
   // Get webform component options.
   $component_types = module_invoke_all('webform_component_info');
+  // Remove sp_active component type, this will always be synced when available.
+  if (!empty($component_types['sp_active'])) {
+    unset($component_types['sp_active']);
+  }
   $options = array();
   if (!empty($component_types)) {
     foreach ($component_types as $key => $component_type) {
@@ -1038,7 +1042,7 @@ function spwebformsync_settings_form($form, &$form_state) {
   // Select webform component types form.
   $form['spwebformsync_webform_settings']['spwebformsync_allowed_component_types'] = array(
     '#type' => 'checkboxes',
-    '#title' => 'Kies webformulier tekst veld types om te kunnen synchroniseren.',
+    '#title' => 'Kies webformulier veld types om te kunnen synchroniseren.',
     '#options' => $options,
     '#default_value' => variable_get('spwebformsync_allowed_component_types', array()),
   );

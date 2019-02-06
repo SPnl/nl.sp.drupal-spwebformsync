@@ -114,8 +114,13 @@ function spwebformsync_process_submission($submission) {
     $groups = spwebformsync_parse_groups($submission, $sync_data);
     $data['groups'] = $groups;
 
-    // Sync submission to CiviCRM.
+    // Add sp_active activity data if available.
+    $sp_active = spwebformsync_parse_activities($webform, $submission);
+    if (!empty($sp_active)) {
+      $data['sp_active'] = $sp_active;
+    }
 
+    // Sync submission to CiviCRM.
     switch ($target) {
       case 'civicrm':
         $result = spcivipush_push_contact($data, $submission);
@@ -604,7 +609,7 @@ function spwebformsync_civi_fields() {
 /**
  * Push contact to datadrop.
  *
- * data: array()
+ * Data: array()
  *   keys:
  *     - contact_id
  *     - name
@@ -642,10 +647,14 @@ function spwebformsync_civi_fields() {
  *     - author
  *     - source
  *     - groups: array(group_id_1, group_id_2, etc.)
+ *     - sp_active: array(
+ *         active,
+ *         activities: array(
+ *         )
+ *       )
  *
  *
  * debug_info: variable content shown in logs.
- *
  */
 function spwebformsync_datadrop($data, $debug_info, $source_data) {
   if (
@@ -690,4 +699,35 @@ function spwebformsync_datadrop($data, $debug_info, $source_data) {
       watchdog('spwebformsync', 'Error pushing data to spdatadrop location: <pre>@message_data</pre>', array('@message_data' => print_r($message_data, TRUE)), WATCHDOG_ERROR);
       return FALSE;
   }
+}
+
+/**
+ * Parses activity data from submission for sending to spcivipush module.
+ */
+function spwebformsync_parse_activities($webform, $submission) {
+  $parsed_data = array();
+  if (isset($submission->data)) {
+    if (!empty($webform->webform['components'])) {
+      foreach ($webform->webform['components'] as $key => $component) {
+        if (!empty($component['type'] && $component['type'] === 'sp_active')) {
+          if (!empty($submission->data[$key])) {
+            // Parse active.
+            $data_to_parse = $submission->data[$key];
+            $first_element = array_shift($data_to_parse);
+            if (!empty($first_element)) {
+              $parsed_data['active'] = empty($first_element) ? '' : $first_element;
+              $parsed_data['activities'] = array();
+              foreach ($data_to_parse as $activity) {
+                if (!empty($activity)) {
+                  $parsed_data['activities'][$activity] = $activity;
+                }
+              }
+              break;
+            }
+          }
+        }
+      }
+    }
+  }
+  return $parsed_data;
 }
