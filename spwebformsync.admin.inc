@@ -25,6 +25,7 @@ function spwebformsync_admin_form($form, &$form_state, $form_id = NULL) {
     foreach ($webforms as $webform) {
       $webform_select_options[$webform->nid] = $webform->title . ' (' . $webform->nid . ')';
     }
+    krsort($webform_select_options);
 
     // Create form element.
     $form['webform'] = array(
