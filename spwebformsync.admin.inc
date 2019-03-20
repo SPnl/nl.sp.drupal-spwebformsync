@@ -1148,47 +1148,63 @@ function spwebformsync_group_autocomplete($string) {
 
 function spwebformsync_overview() {
   $sync_data = variable_get('spwebformsync_sync_data', array());
+  krsort($sync_data);
+
+  // Show forms without sync.
+  $markup = '<table><tr><th>Webformulieren zonder sync</th></tr>';
+  $webforms = spwebformsync_get_webforms();
+  krsort($webforms);
+  foreach ($webforms as $form) {
+    if (empty($sync_data[$form->nid])) {
+      $markup .= '<tr><td><a href="/node/'. $form->nid . '">'.$form->title.'</a></td></tr>';
+    }
+  }
+  $markup .= '</table><p></p>&nbsp;</p>';
+
+  // Show syncs.
   if (!empty($sync_data)) {
     $data_names = spwebformsync_civi_fields();
-    $markup = '<table><tr><th>Webformulier</th><th>Webformulier &#8594; Civicrm</th><th>Vaste groepen</th><th>Variabele groepselecties</th><th>Cron wachtrij</th><th></th></tr>';
+    $markup .= '<table><tr><th>Webformulier</th><th>Webformulier &#8594; Civicrm</th><th>Vaste groepen</th><th>Variabele groepselecties</th><th>Cron wachtrij</th><th></th></tr>';
     foreach ($sync_data as $data) {
       $form = node_load($data['webform']);
-      $components = $form->webform['components'];
-      $components_list = spwebformsync_get_components_list($components);
-      $postphoned_number = spwebformsync_unprocessed_count($data['webform']);
-      $markup .= '<tr><td><a href="/node/'. $form->nid . '">'.$form->title.'</a></td>';
-      $markup .= '<td><table>';
-      foreach ($data_names as $key => $name) {
-        if (!empty($data[$key . '_component'])) {
-          $component_id = $data[$key . '_component'];
-          $component_name = !empty($components_list[$component_id]) ? $components_list[$component_id] : $components[$data[$key . '_component']]['name'];
-          $markup .= '<tr><td>' . $component_name . '</td><td>&nbsp;&#8594;&nbsp;</td><td>' . ucfirst($name) . '</td></tr>';
-        }
-      }
-      $markup .= '</table></td><td>';
-      if (isset($data['selected_fixed_groups'])) {
-        foreach ($data['selected_fixed_groups'] as $groupname) {
-          $markup .= $groupname . '<br/>';
-        }
-      }
-      else {
-        $markup .= 'Geen';
-      }
-      $markup .= '</td><td>';
-      if (!empty($data['selected_variable_groups'])) {
-        foreach ($data['selected_variable_groups'] as $component_data) {
-          $markup .= '<p>'.$component_data['component_name'].'<br/><table>';
-          foreach ($component_data['values'] as $sync_data) {
-            $markup .= '<tr><td>'.$sync_data['value_name'].'</td><td>&nbsp;&#8594;&nbsp;</td><td>'.$sync_data['group_name'].'</td></tr>';
+      if (!empty($form)) {
+        $components = $form->webform['components'];
+        $components_list = spwebformsync_get_components_list($components);
+        $postphoned_number = spwebformsync_unprocessed_count($data['webform']);
+        $markup .= '<tr><td><a href="/node/'. $form->nid . '">'.$form->title.'</a></td>';
+        $markup .= '<td><table>';
+        foreach ($data_names as $key => $name) {
+          if (!empty($data[$key . '_component'])) {
+            $component_id = $data[$key . '_component'];
+            $component_name = !empty($components_list[$component_id]) ? $components_list[$component_id] : $components[$data[$key . '_component']]['name'];
+            $markup .= '<tr><td>' . $component_name . '</td><td>&nbsp;&#8594;&nbsp;</td><td>' . ucfirst($name) . '</td></tr>';
           }
-          $markup .= '</table></p>';
         }
+        $markup .= '</table></td><td>';
+        if (isset($data['selected_fixed_groups'])) {
+          foreach ($data['selected_fixed_groups'] as $groupname) {
+            $markup .= $groupname . '<br/>';
+          }
+        }
+        else {
+          $markup .= 'Geen';
+        }
+        $markup .= '</td><td>';
+        if (!empty($data['selected_variable_groups'])) {
+          foreach ($data['selected_variable_groups'] as $component_data) {
+            $markup .= '<p>'.$component_data['component_name'].'<br/><table>';
+            foreach ($component_data['values'] as $sync_items) {
+              $markup .= '<tr><td>'.$sync_items['value_name'].'</td><td>&nbsp;&#8594;&nbsp;</td><td>'.$sync_items['group_name'].'</td></tr>';
+            }
+            $markup .= '</table></p>';
+          }
+        }
+        else {
+          $markup .= 'Geen';
+        }
+        $markup .= '</td><td>' . $postphoned_number . '</td>';
+        $markup .= '<td><a href="/admin/config/sp/spwebformsync/configure/' . $form->nid . '">bewerk</a> <a href="/admin/config/sp/spwebformsync/delete/' . $form->nid . '">verwijder</a></td></tr>';
       }
-      else {
-        $markup .= 'Geen';
-      }
-      $markup .= '</td><td>' . $postphoned_number . '</td>';
-      $markup .= '<td><a href="/admin/config/sp/spwebformsync/configure/' . $form->nid . '">bewerk</a> <a href="/admin/config/sp/spwebformsync/delete/' . $form->nid . '">verwijder</a></td></tr>';
     }
     $markup .= '</table>';
   }
