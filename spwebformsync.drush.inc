@@ -9,7 +9,25 @@ function spwebformsync_drush_command() {
     'aliases'     => array('spwsr'),
   );
 
+  $items['spwebformsync-sync'] = array(
+    'description' => "Sync.",
+    'aliases'     => array('spws'),
+  );
+
   return $items;
+}
+
+/*
+ * Syncs not yet synced webform submissions.
+ */
+function drush_spwebformsync_sync() {
+  $sync_type = variable_get('spwebformsync_sync_type');
+  if ($sync_type == 'cron') {
+    set_time_limit(120);
+    watchdog('spwebformsync', 'Sync started by drush.');
+    spwebformsync_sync();
+    watchdog('spwebformsync', 'Sync ended.');
+  }
 }
 
 function drush_spwebformsync_retry() {
