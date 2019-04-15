@@ -22,13 +22,13 @@ function spwebformsync_menu() {
     'type' => MENU_NORMAL_ITEM,
     'page callback' => 'spwebformsync_overview',
     'file' => 'spwebformsync.admin.inc',
-    'access callback' => 'sprbs_access_check',
+    'access callback' => 'spwebformsync_access_check',
   );
 
   $items['admin/config/sp/spwebformsync/overview'] = array(
     'title' => 'Overzicht SP webformulier synchronisaties',
     'type' => MENU_DEFAULT_LOCAL_TASK,
-    'access callback' => 'sprbs_access_check',
+    'access callback' => 'spwebformsync_access_check',
     'weight' => '0',
   );
 
@@ -38,7 +38,7 @@ function spwebformsync_menu() {
     'page callback' => 'drupal_get_form',
     'page arguments' => array('spwebformsync_admin_form', arg(4)),
     'file' => 'spwebformsync.admin.inc',
-    'access callback' => 'sprbs_access_check',
+    'access callback' => 'spwebformsync_access_check',
   );
 
   $items['admin/config/sp/spwebformsync/settings'] = array(
@@ -47,7 +47,7 @@ function spwebformsync_menu() {
     'page callback'  => 'drupal_get_form',
     'page arguments' => array('spwebformsync_settings_form'),
     'file' => 'spwebformsync.admin.inc',
-    'access callback' => 'sprbs_access_check',
+    'access callback' => 'spwebformsync_access_check',
     'weight' => '1',
   );
 
@@ -55,7 +55,7 @@ function spwebformsync_menu() {
     'title' => 'SP webformulier synchronisatie verwijderen',
     'page callback' => 'spwebformsync_delete',
     'page arguments' => array(5),
-    'access callback' => 'sprbs_access_check',
+    'access callback' => 'spwebformsync_access_check',
     'type' => MENU_CALLBACK,
     'file' => 'spwebformsync.admin.inc',
   );
@@ -63,7 +63,7 @@ function spwebformsync_menu() {
   $items['spwebformsync/group/autocomplete'] = array(
     'title' => 'SP webformsync autocomplete',
     'page callback' => 'spwebformsync_group_autocomplete',
-    'access callback' => 'sprbs_access_check',
+    'access callback' => 'spwebformsync_access_check',
     'type' => MENU_CALLBACK,
     'file' => 'spwebformsync.admin.inc',
   );
@@ -77,6 +77,25 @@ function spwebformsync_menu() {
   );
 
   return $items;
+}
+
+/**
+ * @return bool Has SPRBS configuration access
+ */
+function spwebformsync_access_check() {
+  return (user_access('administer site configuration') || user_access('administer sp webformsync'));
+}
+
+/**
+ * Definces permission to administer webformsync.
+ */
+function spwebformsync_permission() {
+  return array(
+    'administer sp webformsync' => array(
+      'title' => 'Beheer SP webformsync',
+      'description' => 'Stel in welke data uit webformulierinzendingen automatisch door te sturen naar CiviCRM.',
+    ),
+  );
 }
 
 /**
