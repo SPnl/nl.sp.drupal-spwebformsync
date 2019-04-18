@@ -563,7 +563,7 @@ function spwebformsync_push_contact_process_result($result, $submission, $sync_d
   else {
     $contact_id = $result;
     spwebformsync_store_submission_sync_state($submission->nid, $submission->sid, 'synced');
-    //spwebformsync_send_mails($contact_id, $sync_data, $submission, $webform);
+    spwebformsync_send_mails($contact_id, $sync_data, $submission, $webform);
   }
   watchdog('spwebformsync', 'Processed submission nr. '.$submission->sid);
   return $error;
