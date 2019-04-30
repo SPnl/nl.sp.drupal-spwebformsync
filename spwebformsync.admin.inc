@@ -1069,21 +1069,52 @@ function spwebformsync_settings_form($form, &$form_state) {
       '#empty_option' => '- Geen -',
       '#name' => 'spwebformsync_add_submissions_select',
     );
-  }
-  $form['spwebformsync_add_submissions']['spwebformsync_add_submissions_submit'] = array(
-    '#type' => 'button',
-    '#value' => 'Toevoegen',
-    '#name' => 'add_submissions_submit',
-    '#states' => array(
-      'visible' => array(
-        ':input[name="spwebformsync_add_submissions_select"]' => array('!value' => ''),
+    $form['spwebformsync_add_submissions']['spwebformsync_add_submissions_submit'] = array(
+      '#type' => 'button',
+      '#value' => 'Toevoegen',
+      '#name' => 'add_submissions_submit',
+      '#states' => array(
+        'visible' => array(
+          ':input[name="spwebformsync_add_submissions_select"]' => array('!value' => ''),
+        ),
       ),
-    ),
-    '#ajax' => array(
-      'wrapper' => 'spwebformsync_add_submissions',
-      'callback' => 'spwebformsync_form_add_submissions',
-    ),
-  );
+      '#ajax' => array(
+        'wrapper' => 'spwebformsync_add_submissions',
+        'callback' => 'spwebformsync_form_add_submissions',
+      ),
+    );
+
+    // Resync all form submissions.
+    $form['spwebformsync_resync_submissions'] = array(
+      '#type' => 'fieldset',
+      '#title' => 'Alle inzendingen opnieuw syncen',
+      '#prefix' => '<div id="spwebformsync_resync_submissions">',
+      '#suffix' => '</div>',
+    );
+
+    $form['spwebformsync_resync_submissions']['spwebformsync_resync_submissions_select'] = array(
+      '#type' => 'select',
+      '#title' => 'Selecteer het webformulier',
+      '#options' => $webform_select_options,
+      '#empty_option' => '- Geen -',
+      '#name' => 'spwebformsync_resync_submissions_select',
+    );
+
+    $form['spwebformsync_resync_submissions']['spwebformsync_resync_submissions_submit'] = array(
+      '#type' => 'button',
+      '#value' => 'Sync opnieuw',
+      '#name' => 'resync_submissions_submit',
+      '#states' => array(
+        'visible' => array(
+          ':input[name="spwebformsync_resync_submissions_select"]' => array('!value' => ''),
+        ),
+      ),
+      '#ajax' => array(
+        'wrapper' => 'spwebformsync_resync_submissions',
+        'callback' => 'spwebformsync_form_resync_submissions',
+      ),
+    );
+  }
   return system_settings_form($form);
 }
 
@@ -1125,6 +1156,21 @@ function spwebformsync_form_add_submissions($form, &$form_state) {
     drupal_set_message('Er zijn '.$count.' inzendingen toegevoegd aan de wachtrij.');
   }
   return $form['spwebformsync_add_submissions'];
+}
+
+function spwebformsync_form_resync_submissions($form, &$form_state) {
+  $webform = $form_state['values']['spwebformsync_resync_submissions_select'];
+  if (!empty($webform)) {
+    $count = db_update('spwebformsync_syncstate')
+      ->fields(array(
+        'state' => 0,
+      ))
+      ->condition('nid', $webform)
+      ->condition('state', 1)
+      ->execute();
+    drupal_set_message('Er zijn '.$count.' inzendingen toegevoegd aan de wachtrij.');
+  }
+  return $form['spwebformsync_resync_submissions'];
 }
 
 function spwebformsync_group_autocomplete($string) {
