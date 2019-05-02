@@ -67,6 +67,7 @@ function spwebformsync_get_civi_groups($sync = TRUE) {
         $params = array(
           'sequential'            => 1,
           'option.limit'          => 9999,
+          'return'                => array('id', 'title'),
         );
         $groups_results = $spcivi->api('Group', 'get', $params);
         if (_spcf_check_result($groups_results, 'groepen', 'get', $params)) {
