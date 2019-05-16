@@ -1166,7 +1166,7 @@ function spwebformsync_form_resync_submissions($form, &$form_state) {
         'state' => 0,
       ))
       ->condition('nid', $webform)
-      ->condition('state', 1)
+      ->condition('state', array(1,2), 'IN')
       ->execute();
     drupal_set_message('Er zijn '.$count.' inzendingen toegevoegd aan de wachtrij.');
   }
