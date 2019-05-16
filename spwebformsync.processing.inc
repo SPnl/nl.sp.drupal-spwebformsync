@@ -29,7 +29,7 @@ function spwebformsync_process_submission($submission) {
     $site_name = variable_get('site_name');
     global $base_url;
     $parsed_webform_url = parse_url($base_url);
-    $source = 'SP webformsync: ' . $webform->title . ' (id: ' . $webform->nid . ', sid: ' . $submission->sid . $source_url . ')';
+    $source = 'SP webformsync: ' . $webform->title . ' (domain: ' . $parsed_webform_url['host'] . ', id: ' . $webform->nid . ', sid: ' . $submission->sid . $source_url . ')';
     $source_data = array(
       'source_domain' => $parsed_webform_url['host'],
       'source_title' => $webform->title,
