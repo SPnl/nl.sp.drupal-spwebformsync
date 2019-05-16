@@ -18,12 +18,20 @@ function spwebformsync_process_submission($submission) {
     // Get source.
     // Create contact source line.
     $webform = node_load($sync_data['webform']);
+    // Get source url from component.
+    $source_url_component = webform_get_source_url_cid($webform);
+    $source_url = '';
+    if ($source_url_component !== FALSE) {
+      if (!empty($submission->data[$source_url_component])) {
+        $source_url = ', url: ' . $submission->data[$source_url_component][0];
+      }
+    }
     $site_name = variable_get('site_name');
     global $base_url;
-    $parsed_url = parse_url($base_url);
-    $source = 'Form: ' . substr($webform->title, 0, 16) . ' (id: ' . $webform->nid . ', sid: ' . $submission->sid .', ' . $parsed_url['host'] . ')';
+    $parsed_webform_url = parse_url($base_url);
+    $source = 'SP webformsync: ' . $webform->title . ' (id: ' . $webform->nid . ', sid: ' . $submission->sid . $source_url . ')';
     $source_data = array(
-      'source_domain' => $parsed_url['host'],
+      'source_domain' => $parsed_webform_url['host'],
       'source_title' => $webform->title,
       'source_id' => $webform->nid,
       'source_ip' => $submission->remote_addr,
@@ -730,4 +738,20 @@ function spwebformsync_parse_activities($webform, $submission) {
     }
   }
   return $parsed_data;
+}
+
+/**
+ * Given determine cid of source url component.
+ *
+ * @param $node
+ *   A fully loaded node object.
+ * @return array
+ */
+function webform_get_source_url_cid($node) {
+  $cids = array();
+  foreach ($node->webform['components'] as $cid => $component) {
+    if ($component['form_key'] == 'source_url') {
+      return $cid;
+    }
+  }
 }
