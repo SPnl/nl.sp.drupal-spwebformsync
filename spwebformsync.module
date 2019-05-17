@@ -222,3 +222,57 @@ function spwebformsync_options_key_validate($form, &$form_state) {
     }
   }
 }
+
+/**
+ * Add default webformsync hidden components to webform.
+ */
+function spwebformsync_node_presave($node) {
+  // Check if webform.
+  if ($node->type == 'webform') {
+    if (!empty($node->webform['components'])) {
+      $default_components = array(
+        array(
+          'form_key' => 'source_url',
+          'title' => 'Source url',
+          'found' => FALSE,
+        ),
+        array(
+          'form_key' => 'sp_unsubscribe_link_secret',
+          'title' => 'SP unsubscribe link secret',
+          'found' => FALSE,
+        ),
+      );
+      foreach ($default_components as $default_component_key => $default_component) {
+        // Check if unsubscribe_secret hidden component already exists.
+        $cid = spwebformsync_get_cid_by_form_key($node, $default_component['form_key']);
+        if (empty($cid)) {
+          // Add new component.
+          $component = array(
+            'name' => $default_component['title'],
+            'form_key' => $default_component['form_key'],
+            'type' => 'hidden',
+            'mandatory' => 0,
+            'weight' => 9,
+            'pid' => 0,
+            'extra' => array(
+              'hidden_type' => 'value',
+              'private' => 0,
+            ),
+          );
+          switch ($default_component['form_key']) {
+            case 'sp_unsubscribe_link_secret':
+              $random_bytes = openssl_random_pseudo_bytes(48);
+              $random_key = base64_encode($random_bytes);
+              $component['value'] = $random_key;
+              break;
+
+            case 'source_url':
+              $component['value'] = '[current-page:url]';
+              break;
+          }
+          $node->webform['components'][] = $component;
+        }
+      }
+    }
+  }
+}
