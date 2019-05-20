@@ -970,6 +970,21 @@ function spwebformsync_settings_form($form, &$form_state) {
     ),
   );
 
+  $form['spwebformsync_sync_settings']['spwebformsync_datadrop_secret_unsubscribe'] = array(
+    '#type' => 'textfield',
+    '#title' => 'Geheime sleutel voor uitschrijf link',
+    '#description' => 'This secret must match the unsubscribe secret set in the spdatadrop module on the datadrop server.',
+    '#default_value' => variable_get('spwebformsync_datadrop_secret_unsubscribe', ''),
+    '#states' => array(
+      'visible' => array(
+        ':input[name="spwebformsync_sync_target"]' => array('value' => 'datadrop'),
+      ),
+      'required' => array(
+        ':input[name="spwebformsync_sync_target"]' => array('value' => 'datadrop'),
+      ),
+    ),
+  );
+
   $form['spwebformsync_sync_settings']['spwebformsync_sync_type'] = array(
     '#type' => 'radios',
     '#title' => 'Wanneer wilt u contacten synchroniseren?',

@@ -261,8 +261,7 @@ function spwebformsync_node_presave($node) {
           );
           switch ($default_component['form_key']) {
             case 'sp_unsubscribe_link_secret':
-              $random_bytes = openssl_random_pseudo_bytes(48);
-              $random_key = base64_encode($random_bytes);
+              $random_key = drupal_random_key(24);
               $component['value'] = $random_key;
               break;
 
@@ -275,4 +274,44 @@ function spwebformsync_node_presave($node) {
       }
     }
   }
+}
+
+/**
+ * Add unsubscribe link to mimemail variables.
+ */
+function spwebformsync_preprocess_mimemail_message(&$variables) {
+  // Check if webform submission message.
+  if (!empty($variables['message']['params']['submission'])) {
+    $node = $variables['message']['params']['node'];
+    $submission = $variables['message']['params']['submission'];
+    // Get secret.
+    $cid = spwebformsync_get_cid_by_form_key($node, 'sp_unsubscribe_link_secret');
+    if (!empty($cid)) {
+      $secret = $submission->data[$cid][0];
+      // Create unsubscribe link.
+      $data = array(
+        'secret' => $secret,
+      );
+      $hash = spwebformsync_encrypt($data);
+      // Add link variable.
+      $datadrop_server = variable_get('spwebformsync_datadrop_server', '');
+      if (!empty($datadrop_server)) {
+        $unsubscribe_link = $datadrop_server . '/afmelden/' . $hash;
+        if (valid_url($unsubscribe_link, TRUE)) {
+          $variables['unsubscribe_link'] = $unsubscribe_link;
+        }
+      }
+    }
+  }
+}
+
+/**
+ * Creates an url applicable string that contains encrypted data.
+ */
+function spwebformsync_encrypt(array $data) {
+  $data = serialize($data);
+  $key = variable_get('spwebformsync_datadrop_secret_unsubscribe', 'paijeich6zoh4Mah');
+  $encrypted = openssl_encrypt($data, 'AES-256-CBC', $key, 0, 'Quie9ophei2iKah1');
+  $hash = urlencode(base64_encode($encrypted));
+  return $hash;
 }
