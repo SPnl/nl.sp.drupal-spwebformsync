@@ -18,8 +18,16 @@ function spwebformsync_process_submission($submission) {
     // Get source.
     // Create contact source line.
     $webform = node_load($sync_data['webform']);
+    // Get link secret from component.
+    $link_secret_component = spwebformsync_get_cid_by_form_key($webform, 'sp_unsubscribe_link_secret');
+    $link_secret = '';
+    if ($link_secret_component !== FALSE) {
+      if (!empty($submission->data[$link_secret_component])) {
+        $link_secret = $submission->data[$link_secret_component][0];
+      }
+    }
     // Get source url from component.
-    $source_url_component = webform_get_source_url_cid($webform);
+    $source_url_component = spwebformsync_get_cid_by_form_key($webform, 'source_url');
     $source_url = '';
     if ($source_url_component !== FALSE) {
       if (!empty($submission->data[$source_url_component])) {
@@ -36,6 +44,7 @@ function spwebformsync_process_submission($submission) {
       'source_id' => $webform->nid,
       'source_ip' => $submission->remote_addr,
       'submission_id' => $submission->sid,
+      'secret' => $link_secret,
     );
 
     // Process spreferal.
@@ -747,10 +756,10 @@ function spwebformsync_parse_activities($webform, $submission) {
  *   A fully loaded node object.
  * @return array
  */
-function webform_get_source_url_cid($node) {
+function spwebformsync_get_cid_by_form_key($node, $form_key) {
   $cids = array();
   foreach ($node->webform['components'] as $cid => $component) {
-    if ($component['form_key'] == 'source_url') {
+    if ($component['form_key'] == $form_key) {
       return $cid;
     }
   }
