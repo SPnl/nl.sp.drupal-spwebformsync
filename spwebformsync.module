@@ -120,14 +120,30 @@ function spwebformsync_node_delete($node) {
 }
 
 /**
+ * Implements hook_webform_submission_insert().
+ */
+function spwebformsync_webform_submission_presave($node, &$submission) {
+  // Set secret field value.
+  $cid = spwebformsync_get_cid_by_form_key($node, 'sp_unsubscribe_link_secret');
+  if (!empty($cid)) {
+    if (empty($submission->data[$cid][0])) {
+      $random_key = drupal_random_key(24);
+      $submission->data[$cid][0] = $random_key;
+    }
+  }
+}
+
+/**
  *  Implements hook_webform_submission_insert.
  */
 function spwebformsync_webform_submission_insert($node, $submission) {
   $sync_data = variable_get('spwebformsync_sync_data', FALSE);
   $sync_type = variable_get('spwebformsync_sync_type');
+  // Store submission sync state.
   if (!empty($sync_data) && isset($sync_data[$node->nid])) {
     $result = spwebformsync_store_submission_sync_state($node->nid, $submission->sid, 'unprocessed');
     if (!$result) watchdog('spwebformsync', 'Error storing submission state in database (sid=' . $submission->sid . ').', array(), WATCHDOG_ERROR);
+    // Sync directly if setting not cron.
     if ($sync_type === 'direct') {
       // Directly sync without check if confirmed.
       spwebformsync_process_submission($submission);
@@ -261,8 +277,7 @@ function spwebformsync_node_presave($node) {
           );
           switch ($default_component['form_key']) {
             case 'sp_unsubscribe_link_secret':
-              $random_key = drupal_random_key(24);
-              $component['value'] = $random_key;
+              $component['value'] = '';
               break;
 
             case 'source_url':
@@ -290,6 +305,7 @@ function spwebformsync_preprocess_mimemail_message(&$variables) {
       $secret = $submission->data[$cid][0];
       // Create unsubscribe link.
       $data = array(
+        'title' => $node->title,
         'secret' => $secret,
       );
       $hash = spwebformsync_encrypt($data);
