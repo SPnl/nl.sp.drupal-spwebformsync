@@ -310,7 +310,8 @@ function spwebformsync_preprocess_mimemail_message(&$variables) {
       );
       $hash = spwebformsync_encrypt($data);
       // Add link variable.
-      $datadrop_server = variable_get('spwebformsync_datadrop_server', '');
+      //$datadrop_server = variable_get('spwebformsync_datadrop_server', '');
+      $datadrop_server = 'https://uitschrijven.sp.nl';
       if (!empty($datadrop_server)) {
         $unsubscribe_link = $datadrop_server . '/afmelden/' . $hash;
         if (valid_url($unsubscribe_link, TRUE)) {
