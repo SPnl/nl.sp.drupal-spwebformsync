@@ -544,6 +544,8 @@ function spwebformsync_send_mail($contact_data, $submission, $webform, $subject,
     $params = array(
       'subject' => $subject,
       'text' => $text,
+      'node' => $webform,
+      'submission' => $submission,
     );
     $message = drupal_mail('spwebformsync', 'sync_mail', $mailto, language_default(), $params, $mailfrom);
     // Process result.

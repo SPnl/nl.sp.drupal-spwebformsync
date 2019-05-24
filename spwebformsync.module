@@ -244,7 +244,7 @@ function spwebformsync_options_key_validate($form, &$form_state) {
  */
 function spwebformsync_node_presave($node) {
   // Check if webform.
-  if ($node->type == 'webform') {
+  if (!empty($node->webform)) {
     if (!empty($node->webform['components'])) {
       $default_components = array(
         array(
