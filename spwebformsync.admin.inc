@@ -1216,7 +1216,7 @@ function spwebformsync_overview() {
   $webforms = spwebformsync_get_webforms();
   krsort($webforms);
   foreach ($webforms as $form) {
-    if (empty($sync_data[$form->nid])) {
+    if (empty($sync_data[$form->nid]) && $form->status == 1) {
       $markup .= '<tr><td><a href="/node/'. $form->nid . '">'.$form->title.'</a></td></tr>';
     }
   }
