@@ -208,10 +208,6 @@ function spwebformsync_mail($key, &$message, $params) {
     $message['body'][] = 'Thx, het webteam';
     $message['body'][] = '(Dit is een automatisch gegenereerd bericht).';
     break;
-  case 'sync_mail':
-    $message['subject'] = $params['subject'];
-    $message['body'][] = $params['text'];
-    break;
   }
 }
 
