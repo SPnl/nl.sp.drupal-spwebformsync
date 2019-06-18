@@ -221,6 +221,9 @@ function spwebformsync_form_alter(&$form, &$form_state, $form_id) {
       $form['#validate'][] = 'spwebformsync_options_key_validate';
     }
   }
+  if ($form_id === 'webform_email_edit_form') {
+    $form['template']['#description'] .= '<p>Gebruik het token: [unsubscribe_link] in de e-mail tekst om een afmeldlink toe te voegen.</p>';
+  }
 }
 
 function spwebformsync_options_key_validate($form, &$form_state) {
@@ -297,26 +300,15 @@ function spwebformsync_node_presave($node) {
 function spwebformsync_preprocess_mimemail_message(&$variables) {
   // Check if webform submission message.
   if (!empty($variables['message']['params']['submission'])) {
-    $node = $variables['message']['params']['node'];
     $submission = $variables['message']['params']['submission'];
-    // Get secret.
-    $cid = spwebformsync_get_cid_by_form_key($node, 'sp_unsubscribe_link_secret');
-    if (!empty($cid)) {
-      $secret = $submission->data[$cid][0];
-      // Create unsubscribe link.
-      $data = array(
-        'title' => $node->title,
-        'secret' => $secret,
-      );
-      $hash = spwebformsync_encrypt($data);
-      // Add link variable.
-      //$datadrop_server = variable_get('spwebformsync_datadrop_server', '');
-      $datadrop_server = 'https://uitschrijven.sp.nl';
-      if (!empty($datadrop_server)) {
-        $unsubscribe_link = $datadrop_server . '/afmelden/' . $hash;
-        if (valid_url($unsubscribe_link, TRUE)) {
-          $variables['unsubscribe_link'] = $unsubscribe_link;
-        }
+    // Get unsubscribe link.
+    $unsubscribe_link = spwebformsync_get_unsubscribe_link($submission);
+    if ($unsubscribe_link) {
+      // Replace token in body.
+      $variables['body'] = str_replace('[unsubscribe_link]', $unsubscribe_link, $variables['body']);
+      // Add unsubscribe link variable.
+      if (valid_url($unsubscribe_link, TRUE)) {
+        $variables['unsubscribe_link'] = $unsubscribe_link;
       }
     }
   }
@@ -331,4 +323,27 @@ function spwebformsync_encrypt(array $data) {
   $encrypted = openssl_encrypt($data, 'AES-256-CBC', $key, 0, 'Quie9ophei2iKah1');
   $hash = urlencode(base64_encode($encrypted));
   return $hash;
+}
+
+function spwebformsync_get_unsubscribe_link($submission) {
+  $unsubscribe_link = FALSE;
+  $node = node_load($submission->nid);
+  // Get hash.
+  $cid = spwebformsync_get_cid_by_form_key($node, 'sp_unsubscribe_link_secret');
+  if (!empty($cid)) {
+    $secret = $submission->data[$cid][0];
+    // Create unsubscribe link.
+    $data = array(
+      'title' => $node->title,
+      'secret' => $secret,
+    );
+    $hash = spwebformsync_encrypt($data);
+    // Add link variable.
+    //$datadrop_server = variable_get('spwebformsync_datadrop_server', '');
+    $datadrop_server = 'https://uitschrijven.sp.nl';
+    if (!empty($datadrop_server)) {
+      $unsubscribe_link = $datadrop_server . '/afmelden/' . $hash;
+    }
+  }
+  return $unsubscribe_link;
 }
