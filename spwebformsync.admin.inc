@@ -69,11 +69,45 @@ function spwebformsync_admin_form($form, &$form_state, $form_id = NULL) {
       );
 
       foreach ($data_names as $data_key => $data_name) {
+        $default_value = '';
         if (!empty($sync_data[$webform->nid][$data_key . '_component'])) {
           $default_value = $sync_data[$webform->nid][$data_key . '_component'];
         }
-        else {
-          $default_value = '';
+        elseif (module_exists('spbellen') && spbellen_is_spbellen_form($webform->nid)) {
+          // Set default sync fields for beltool.
+          switch ($data_key) {
+            case 'contact_id':
+              $default_value = array_search('CRM contact id (verborgen)', $webform_component_select_options);
+              break;
+
+            case 'name':
+              $default_value = array_search('Weergave naam', $webform_component_select_options);
+              break;
+
+            case 'email':
+              $default_value = array_search('E-mail', $webform_component_select_options);
+              break;
+
+            case 'telephone':
+              $default_value = array_search('Telefoonnummer', $webform_component_select_options);
+              break;
+
+            case 'street':
+              $default_value = array_search('Adresinformatie: Straat', $webform_component_select_options);
+              break;
+
+            case 'house_number':
+              $default_value = array_search('Adresinformatie: Huisnummer', $webform_component_select_options);
+              break;
+
+            case 'postal_code':
+              $default_value = array_search('Adresinformatie: Postcode', $webform_component_select_options);
+              break;
+
+            case 'locality':
+              $default_value = array_search('Adresinformatie: Plaats', $webform_component_select_options);
+              break;
+          }
         }
         // Select name component.
         $form['fields'][$data_key . '_component'] = array(
@@ -92,15 +126,30 @@ function spwebformsync_admin_form($form, &$form_state, $form_id = NULL) {
         if (isset($values[$data_key . '_component'])) {
           $form['fields'][$data_key . '_component']['#default_value'] = $values[$data_key . '_component'];
         }
-
       }
 
       // Add option to overwrite existing civi data.
       if (!empty($sync_data[$webform->nid]['contact_id_component']) && !isset($values['contact_id_component'])) {
         $values['contact_id_component'] = $sync_data[$webform->nid]['contact_id_component'];
       }
+      elseif (module_exists('spbellen') && spbellen_is_spbellen_form($webform->nid)) {
+        // Beltool form, set overwrite by default.
+        $values['contact_id_component'] = array_search('CRM contact id (verborgen)', $webform_component_select_options);
+      }
       if (!empty($values['contact_id_component'])) {
-        $default_value = !empty($sync_data[$webform->nid]['overwrite']['overwrite']) ? array('overwrite') : array();
+        $default_value = array();
+        if (isset($sync_data[$webform->nid]['overwrite']['overwrite'])) {
+          if (empty($sync_data[$webform->nid]['overwrite']['overwrite'])) {
+            $default_value = array();
+          }
+          else {
+            $default_value = array('overwrite');
+          }
+        }
+        elseif (module_exists('spbellen') && spbellen_is_spbellen_form($webform->nid)) {
+          // Beltool form, set overwrite by default.
+          $default_value = array('overwrite');
+        }
         $form['fields']['overwrite'] = array(
           '#type' => 'checkboxes',
           '#title' => 'Overschrijf bestaande waarden in CiviCRM',
