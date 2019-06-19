@@ -306,6 +306,9 @@ function spwebformsync_preprocess_mimemail_message(&$variables) {
       if (valid_url($unsubscribe_link, TRUE)) {
         $variables['unsubscribe_link'] = $unsubscribe_link;
       }
+      // Add domain variable.
+      $domain = spwebformsync_get_domain();
+      $variables['domain'] = $domain;
     }
   }
 }
@@ -321,6 +324,9 @@ function spwebformsync_encrypt(array $data) {
   return $hash;
 }
 
+/**
+ * Get unsubscribe link.
+ */
 function spwebformsync_get_unsubscribe_link($submission) {
   $unsubscribe_link = FALSE;
   $node = node_load($submission->nid);
@@ -342,4 +348,14 @@ function spwebformsync_get_unsubscribe_link($submission) {
     }
   }
   return $unsubscribe_link;
+}
+
+/**
+ * Get site domain.
+ */
+function spwebformsync_get_domain() {
+  // Add domain variable.
+  global $base_url;
+  $domain = preg_replace('(^https?://)', '', $base_url);
+  return $domain;
 }
