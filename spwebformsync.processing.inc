@@ -535,13 +535,20 @@ function spwebformsync_datadrop($data, $debug_info, $source_data) {
       break;
 
     default:
-      $message_data = array(
-        'url' => $url,
+      $message_data = print_r(array(
+        'url' => $datadrop_url,
         'headers' => $headers,
         'post data' => $options,
         'result' => $result,
+      ), TRUE);
+      $error_message = array(
+        'content' => 'Error pushing submission to spdatadrop location: <pre>@message_data</pre>',
+        'data' => array(
+          '@message_data' => $message_data,
+        ),
       );
-      watchdog('spwebformsync', 'Error pushing data to spdatadrop location: <pre>@message_data</pre>', array('@message_data' => print_r($message_data, TRUE)), WATCHDOG_ERROR);
+      watchdog('spwebformsync', $error_message['content'], $error_message['data'], WATCHDOG_ERROR);
+      drupal_mail('spwebformsync', 'error', 'webmaster@sp.nl', language_default(), $error_message, 'webmaster@sp.nl');
       return FALSE;
   }
 }
