@@ -502,6 +502,7 @@ function spwebformsync_civi_fields() {
  * debug_info: variable content shown in logs.
  */
 function spwebformsync_datadrop($data, $debug_info, $source_data) {
+  global $base_url;
   if (
     // Check if testing.
     (!empty($data['name']) && strpos(strtolower($data['name']), '-test') !== FALSE) ||
@@ -536,15 +537,16 @@ function spwebformsync_datadrop($data, $debug_info, $source_data) {
 
     default:
       $message_data = print_r(array(
-        'url' => $datadrop_url,
+        'url' => $url,
         'headers' => $headers,
         'post data' => $options,
         'result' => $result,
       ), TRUE);
       $error_message = array(
-        'content' => 'Error pushing submission to spdatadrop location: <pre>@message_data</pre>',
+        'content' => 'Error pushing submission from (@base_url) to spdatadrop location: <pre>@message_data</pre>',
         'data' => array(
           '@message_data' => $message_data,
+          '@base_url' => $base_url,
         ),
       );
       watchdog('spwebformsync', $error_message['content'], $error_message['data'], WATCHDOG_ERROR);

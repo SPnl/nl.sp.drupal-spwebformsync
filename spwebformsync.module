@@ -210,7 +210,7 @@ function spwebformsync_mail($key, &$message, $params) {
     break;
   case 'error':
     $message['subject'] = 'Webform inzending datadrop mislukt';
-    $message['body'] = format_string($params['content'], $params['data']);
+    $message['body'][] = format_string($params['content'], $params['data']);
     break;
   }
 }
