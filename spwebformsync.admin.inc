@@ -726,6 +726,11 @@ function spwebformsync_settings_form($form, &$form_state) {
   if (!empty($component_types['sp_active'])) {
     unset($component_types['sp_active']);
   }
+  // Remove sp_work_and_int component type, always synced when available.
+  if (!empty($component_types['sp_work_and_int'])) {
+    unset($component_types['sp_work_and_int']);
+  }
+
   $options = array();
   if (!empty($component_types)) {
     foreach ($component_types as $key => $component_type) {

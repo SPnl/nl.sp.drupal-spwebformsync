@@ -131,10 +131,20 @@ function spwebformsync_process_submission($submission) {
     $groups = spwebformsync_parse_groups($submission, $sync_data);
     $data['groups'] = $groups;
 
-    // Add sp_active activity data if available.
-    $sp_active = spwebformsync_parse_activities($webform, $submission);
-    if (!empty($sp_active)) {
-      $data['sp_active'] = $sp_active;
+    if (module_exists('sp_active')) {
+      // Add sp_active activity data if available.
+      $sp_active = spwebformsync_parse_activities($webform, $submission);
+      if (!empty($sp_active)) {
+        $data['sp_active'] = $sp_active;
+      }
+    }
+
+    if (module_exists('sp_work_and_int')) {
+      // Add work and interesests data if available.
+      $sp_work_and_int = spwebformsync_parse_work_and_interests($webform, $submission);
+      if (!empty($sp_work_and_int)) {
+        $data['sp_work_and_int'] = $sp_work_and_int;
+      }
     }
 
     // Sync submission to CiviCRM.
@@ -577,6 +587,46 @@ function spwebformsync_parse_activities($webform, $submission) {
                 }
               }
               break;
+            }
+          }
+        }
+      }
+    }
+  }
+  return $parsed_data;
+}
+
+/**
+ * Parses work and interests component data from submission for sending to spcivipush module.
+ */
+function spwebformsync_parse_work_and_interests($webform, $submission) {
+  $parsed_data = array();
+  if (isset($submission->data)) {
+    if (!empty($webform->webform['components'])) {
+      foreach ($webform->webform['components'] as $key => $component) {
+        if (!empty($component['type'] && $component['type'] === 'sp_work_and_int')) {
+          if (!empty($submission->data[$key])) {
+            $option_groups = sp_work_and_int_get_option_groups();
+            // Parse active.
+            $data_to_parse = $submission->data[$key];
+            $no = 0;
+            foreach ($option_groups as $option_group) {
+              if ($option_group['type'] == 'radios') {
+                $value = $data_to_parse[$no];
+                if (!empty($value)) {
+                  $parsed_data[$option_group['key']] = $value;
+                }
+                $no++;
+              }
+              else {
+                foreach ($option_group['options'] as $option) {
+                  $value = $data_to_parse[$no];
+                  if (!empty($value)) {
+                    $parsed_data[$option_group['key']][$value] = $value;
+                  }
+                  $no++;
+                }
+              }
             }
           }
         }
