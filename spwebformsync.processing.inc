@@ -403,6 +403,178 @@ function spwebformsync_check_address_manually($street_and_number, $contact_id) {
   }
 }
 
+function spwebformsync_send_mails($contact_id, $sync_data, $submission, $webform) {
+  $allowed_types = variable_get('spwebformsync_allowed_component_types', array());
+  $webform_components = spwebformsync_get_webform_allowed_components($webform->nid, $allowed_types);
+  if (!empty($sync_data)) {
+    if (
+      !empty($sync_data['fixed_mail_text']['value']) ||
+      !empty($sync_data['afdeling_mail']) ||
+      !empty($sync_data['variable_mail'])
+    ) {
+      // Get contact data from CiviCRM.
+      $spcivi = \SPCivi::getInstance();
+      $params = array(
+        'contact_id' => $contact_id,
+        'include_non_menmbers' => 1,
+      );
+      $get_contact_results = $spcivi->api('Contact', 'getspdata', $params);
+      $debug_info = 'Getting contact to send mail. Submission id: ' . $submission->sid;
+      if (_spcivipush_check_result($get_contact_results, 'contacten', 'get', $params, $debug_info)) {
+        if (!empty($get_contact_results['values'])) {
+          $contact_data = array_pop($get_contact_results['values']);
+
+          if (!empty($contact_data['email'])) {
+            // Send fixed mail.
+            if (!empty($sync_data['fixed_mail_text']['value'])) {
+              $subject = '';
+              if (empty($contact_data['email'])) {
+                $mailto = variable_get('site_mail', ini_get('sendmail_from'));
+                $subject = 'Niet aan contact verzonden (e-mailadres contact onbekend): ';
+              }
+              else {
+                $mailto = $contact_data['email'];
+              }
+              if (!empty($mailto)) {
+                $text_raw = $sync_data['fixed_mail_text']['value'];
+                $filter_format = $sync_data['fixed_mail_text']['format'];
+                $text = check_markup($text_raw, $filter_format);
+                $subject .= $sync_data['fixed_mail_subject'];
+                $mailfrom = $sync_data['fixed_mail_sender_emailadress'];
+                spwebformsync_send_mail($contact_data, $submission, $webform, $subject, $text, $mailto, $mailfrom);
+              }
+            }
+          }
+
+          // Send variable mail and afdeling mail.
+          $types = array(
+            'variable',
+            'afdeling',
+          );
+          foreach ($types as $type) {
+            if (!empty($sync_data[$type . '_mail'])) {
+              $subject = '';
+              if ($type === 'variable') {
+                // Variable mail.
+                if (empty($contact_data['email'])) {
+                  $mailto = variable_get('site_mail', ini_get('sendmail_from'));
+                  $subject = 'Niet aan contact verzonden (e-mailadres contact onbekend): ';
+                }
+                else {
+                  $mailto = $contact_data['email'];
+                }
+              }
+              else {
+                // Afdeling mail.
+                if (empty($contact_data['afdeling_code'])) {
+                  $mailto = variable_get('site_mail', ini_get('sendmail_from'));
+                  $subject = 'Niet aan afdeling verzonden (afdeling van contact onbekend): ';
+                }
+                else {
+                  $afdeling = spwebformsync_get_afdeling($contact_data['afdeling_code']);
+                  $afdeling_wrapper = entity_metadata_wrapper('node', $afdeling);
+                  if (!isset($afdeling_wrapper->afd_email) || empty($afdeling_wrapper->afd_email->value())) {
+                    $mailto = variable_get('site_mail', ini_get('sendmail_from'));
+                    $subject = 'Niet aan afdeling verzonden (e-mailadres afdeling onbekend): ';
+                  }
+                  else {
+                    $mailto = $afdeling_wrapper->afd_email->value();
+                  }
+                }
+              }
+              if (empty($mailto)) continue;
+              foreach ($sync_data[$type . '_mail'] as $component_id => $to_mail_data) {
+                if (!empty($submission->data[$component_id])) {
+                  foreach ($submission->data[$component_id] as $answer_key) {
+                    if (!empty($to_mail_data['values'][$answer_key]['mail']['value'])) {
+                      $data = $to_mail_data['values'][$answer_key];
+                      $text_raw = $data['mail']['value'];
+                      $filter_format = $data['mail']['format'];
+                      $text = check_markup($text_raw, $filter_format);
+                      $subject .= $data['subject'];
+                      $mailfrom = $data['sender'];
+                      spwebformsync_send_mail($contact_data, $submission, $webform, $subject, $text, $mailto, $mailfrom);
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+function spwebformsync_replace_tokens($contact_data, $submission, $webform, $raw_text) {
+  $matches = array();
+  $text = $raw_text;
+  $token_components = spwebformsync_filter_token_components($webform->webform['components']);
+  if (preg_match_all('/\[([^]\s]+)\]/', $raw_text, $matches)) {
+    foreach ($matches[1] as $key => $pattern_match) {
+      // Replace contact data in raw text.
+      if (!empty($contact_data[$matches[1][$key]])) {
+        $text = str_replace($matches[0][$key], check_plain($contact_data[$matches[1][$key]]), $text);
+      }
+      // Replace component tokens in raw text.
+      if (!empty($token_components)) {
+        foreach ($token_components as $token_component) {
+          $items_parsed = array();
+          if ($matches[1][$key] == $token_component['form_key']) {
+            $mapping = spwebformsync_parse_webform_select_options($webform, $token_component['cid']);
+            $items = $submission->data[$token_component['cid']];
+            foreach ($items as $item) {
+              $item_parsed = isset($mapping[$item]) ? $mapping[$item] : $item;
+              $items_parsed[] = $item_parsed;
+            }
+            $line = join(' en ', array_filter(array_merge(array(join(', ', array_slice($items_parsed, 0, -1))), array_slice($items_parsed, -1)), 'strlen'));
+            $text = str_replace($matches[0][$key], check_plain($line), $text);
+          }
+        }
+      }
+
+    }
+  }
+  return $text;
+}
+
+function spwebformsync_send_mail($contact_data, $submission, $webform, $subject, $text, $mailto, $mailfrom) {
+  $site_mail = variable_get('site_mail', ini_get('sendmail_from'));
+  if (empty($mailfrom)) $mailfrom = $site_mail;
+  if (!empty($mailfrom)) {
+    // Replace contact data in subject and body text.
+    $raw_texts = array(
+      'subject' => $subject,
+      'text' => $text,
+    );
+    foreach ($raw_texts as $text_key => $raw_text) {
+      $$text_key = spwebformsync_replace_tokens($contact_data, $submission, $webform, $raw_text);
+    }
+    // Send mail
+    $params = array(
+      'subject' => $subject,
+      'text' => $text,
+      'node' => $webform,
+      'submission' => $submission,
+    );
+    $message = drupal_mail('spwebformsync', 'sync_mail', $mailto, language_default(), $params, $mailfrom);
+    // Process result.
+    if (!empty($message['result'])) {
+      // Mail verzonden.
+      drupal_set_message('Er is een e-mail verzonden');
+      watchdog('spwebformsync', 'Er is een e-mail verzonden aan ' . check_plain($mailto) .  '.');
+    }
+    else {
+      // Mail faal.
+      drupal_set_message('Er is iets misgegaan met het verzenden van de e-mail aan ' . check_plain($mailto) .  '.');
+      watchdog('spwebformsync', 'Er is iets misgegaan bij het verzenden van een e-mail aan ' . check_plain($mailto) .  '.', WATCHDOG_ERROR);
+    }
+  }
+  else {
+    drupal_set_message('Site e-mailadres is niet ingesteld. Neem contact op met webmaster@sp.nl.', 'error');
+  }
+}
+
 function spwebformsync_push_contact_process_result($result, $submission, $sync_data, $webform) {
   $error = FALSE;
   if ($result === FALSE) {
@@ -418,7 +590,9 @@ function spwebformsync_push_contact_process_result($result, $submission, $sync_d
     $error = TRUE;
   }
   else {
+    $contact_id = $result;
     spwebformsync_store_submission_sync_state($submission->nid, $submission->sid, 'synced');
+    spwebformsync_send_mails($contact_id, $sync_data, $submission, $webform);
   }
   watchdog('spwebformsync', 'Processed submission nr. '.$submission->sid);
   return $error;
