@@ -53,6 +53,10 @@ function spwebformsync_admin_form($form, &$form_state, $form_id = NULL) {
 
 
     $allowed_types = variable_get('spwebformsync_allowed_component_types', array());
+    // Always allow spcontact component.
+    if (module_exists('spcontact')) {
+      $allowed_types['spcontact'] = 'spcontact';
+    }
 
     $data_names = spwebformsync_civi_fields();
     $webform_components = spwebformsync_get_webform_allowed_components($webform_default, $allowed_types);
@@ -73,40 +77,48 @@ function spwebformsync_admin_form($form, &$form_state, $form_id = NULL) {
         if (!empty($sync_data[$webform->nid][$data_key . '_component'])) {
           $default_value = $sync_data[$webform->nid][$data_key . '_component'];
         }
-        elseif (module_exists('spbellen') && spbellen_is_spbellen_form($webform->nid)) {
-          // Set default sync fields for beltool.
-          switch ($data_key) {
-            case 'contact_id':
-              $default_value = array_search('CRM contact id (verborgen)', $webform_component_select_options);
-              break;
+        else {
+          if (module_exists('spbellen') && spbellen_is_spbellen_form($webform->nid)) {
+            // Set default sync fields for beltool.
+            switch ($data_key) {
+              case 'contact_id':
+                $default_value = array_search('CRM contact id (verborgen)', $webform_component_select_options);
+                break;
 
-            case 'name':
-              $default_value = array_search('Weergave naam', $webform_component_select_options);
-              break;
+              case 'name':
+                $default_value = array_search('Weergave naam', $webform_component_select_options);
+                break;
 
-            case 'email':
-              $default_value = array_search('E-mail', $webform_component_select_options);
-              break;
+              case 'email':
+                $default_value = array_search('E-mail', $webform_component_select_options);
+                break;
 
-            case 'telephone':
-              $default_value = array_search('Telefoonnummer', $webform_component_select_options);
-              break;
+              case 'telephone':
+                $default_value = array_search('Telefoonnummer', $webform_component_select_options);
+                break;
 
-            case 'street':
-              $default_value = array_search('Adresinformatie: Straat', $webform_component_select_options);
-              break;
+              case 'street':
+                $default_value = array_search('Adresinformatie: Straat', $webform_component_select_options);
+                break;
 
-            case 'house_number':
-              $default_value = array_search('Adresinformatie: Huisnummer', $webform_component_select_options);
-              break;
+              case 'house_number':
+                $default_value = array_search('Adresinformatie: Huisnummer', $webform_component_select_options);
+                break;
 
-            case 'postal_code':
-              $default_value = array_search('Adresinformatie: Postcode', $webform_component_select_options);
-              break;
+              case 'postal_code':
+                $default_value = array_search('Adresinformatie: Postcode', $webform_component_select_options);
+                break;
 
-            case 'locality':
-              $default_value = array_search('Adresinformatie: Plaats', $webform_component_select_options);
-              break;
+              case 'locality':
+                $default_value = array_search('Adresinformatie: Plaats', $webform_component_select_options);
+                break;
+            }
+          }
+          elseif (module_exists('spcontact')) {
+            // Set default sync fields for spcontact component.
+            if (!empty($webform_component_select_options['spcontact_' . $data_key])) {
+              $default_value = 'spcontact_' . $data_key;
+            }
           }
         }
         // Select name component.
@@ -307,7 +319,7 @@ function spwebformsync_admin_form($form, &$form_state, $form_id = NULL) {
         '#collapsed' => TRUE,
       );
       // Get webform select components.
-      $webform_components = spwebformsync_get_webform_allowed_components($webform_default, array('select' => 'select'));
+      $webform_components = spwebformsync_get_webform_allowed_components($webform_default, array('select' => 'select', 'spcontact' => 'spcontact'));
       // Show selected fields.
       if (!empty($form_state['storage']['selected_webform_components'])) {
         $form['variable_group_select']['#collapsed'] = FALSE;
@@ -349,7 +361,7 @@ function spwebformsync_admin_form($form, &$form_state, $form_id = NULL) {
         }
       }
       if (!empty($webform_components)) {
-        $webform_component_select_options = spwebformsync_get_components_list($webform_components);
+        $webform_component_select_options = spwebformsync_get_components_list($webform_components, 'option_components_only');
         $form['variable_group_select']['webform_comp'] = array(
           '#type' => 'select',
           '#title' => 'Formulier veld',
@@ -511,7 +523,7 @@ function spwebformsync_admin_form($form, &$form_state, $form_id = NULL) {
           '#default_value' => $default_value,
         );
         // Get webform select components.
-        $webform_components = spwebformsync_get_webform_allowed_components($webform_default, array('select' => 'select'));
+        $webform_components = spwebformsync_get_webform_allowed_components($webform_default, array('select' => 'select', 'spcontact' => 'spcontact'));
         // Show selected fields.
         if (!empty($form_state['storage'][$type . '_mail_selected_webform_components'])) {
           $form[$type . '_mail']['#collapsed'] = FALSE;
@@ -595,7 +607,7 @@ function spwebformsync_admin_form($form, &$form_state, $form_id = NULL) {
           );
         }
         if (!empty($webform_components)) {
-          $webform_component_select_options = spwebformsync_get_components_list($webform_components);
+          $webform_component_select_options = spwebformsync_get_components_list($webform_components, 'option_components_only');
           $form[$type . '_mail'][$type . '_mail_webform_component'] = array(
             '#type' => 'select',
             '#title' => 'Formulier veld',
@@ -690,7 +702,7 @@ function spwebformsync_admin_form_validate($form, &$form_state) {
       return;
       break;
     case 'add_webform_comp':
-      $webform_components = spwebformsync_get_webform_allowed_components($form_state['values']['webform'], array('select' => 'select'));
+      $webform_components = spwebformsync_get_webform_allowed_components($form_state['values']['webform'], array('select' => 'select', 'spcontact' => 'spcontact'));
       $webform_component_select_options = webform_component_list($webform, $webform_components, FALSE);
       // Store selected webform component.
       if (!empty($form_state['values']['webform_comp'])) {
@@ -1066,6 +1078,11 @@ function spwebformsync_settings_form($form, &$form_state) {
   // Remove sp_work_and_int component type, always synced when available.
   if (!empty($component_types['sp_work_and_int'])) {
     unset($component_types['sp_work_and_int']);
+  }
+
+  // Remove sp_contact component type, always synced when available.
+  if (!empty($component_types['spcontact'])) {
+    unset($component_types['spcontact']);
   }
 
   $options = array();

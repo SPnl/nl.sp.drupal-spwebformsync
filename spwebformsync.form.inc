@@ -100,16 +100,32 @@ function spwebformsync_get_civi_groups($sync = TRUE) {
 
 function spwebformsync_parse_webform_select_options($webform, $selected_component) {
   $options = array();
-  if (!empty($webform->webform['components'][$selected_component]['extra']['items'])) {
-    $items = $webform->webform['components'][$selected_component]['extra']['items'];
-    $lines = explode("\n", trim($items));
-    foreach ($lines as $line) {
-      $line = trim($line);
-      $matches = array();
-      if (preg_match('/^([^|]*)\|(.*)$/', $line, $matches)) {
-        $options[$matches[1]] = empty($matches[2]) ? $matches[1] : $matches[2];
+  switch($webform->webform['components'][$selected_component]['type']) {
+    case 'select':
+      if (!empty($webform->webform['components'][$selected_component]['extra']['items'])) {
+        $items = $webform->webform['components'][$selected_component]['extra']['items'];
+        $lines = explode("\n", trim($items));
+        foreach ($lines as $line) {
+          $line = trim($line);
+          $matches = array();
+          if (preg_match('/^([^|]*)\|(.*)$/', $line, $matches)) {
+            $options[$matches[1]] = empty($matches[2]) ? $matches[1] : $matches[2];
+          }
+        }
       }
-    }
+      break;
+
+    case 'spcontact':
+      if (!empty($webform->webform['components'][$selected_component]['extra']['optional_questions'])) {
+        $items = $webform->webform['components'][$selected_component]['extra']['optional_questions'];
+        foreach ($items as $item) {
+          if (!empty($item)) {
+            $spcontact_items = spcontact_select_options($webform->webform['components'][$selected_component]);
+            $options[$item] = $spcontact_items[$item];
+          }
+        }
+      }
+      break;
   }
   return $options;
 }
@@ -123,7 +139,7 @@ function spwebformsync_parse_group_form_select_value($group_raw) {
   return $group;
 }
 
-function spwebformsync_get_components_list($webform_components) {
+function spwebformsync_get_components_list($webform_components, $type = 'normal') {
   $list = array();
   foreach ($webform_components as $component_id => $component) {
     switch ($component['type']) {
@@ -146,6 +162,18 @@ function spwebformsync_get_components_list($webform_components) {
             continue;
           }
           $list[$component_id . '|' . $element_id] = $component['name'] . ': ' . $element['#title'];
+        }
+        break;
+
+      case 'spcontact':
+        if ($type == 'option_components_only') {
+          $list[$component_id] = substr($component['name'], 0, 40);
+        }
+        else {
+          $questions = spcontact_questions();
+          foreach ($questions as $key => $question) {
+            $list['spcontact_' . $key] = 'SP Contact: ' . $question;
+          }
         }
         break;
 
