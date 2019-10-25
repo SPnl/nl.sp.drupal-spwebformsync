@@ -171,8 +171,10 @@ function spwebformsync_get_components_list($webform_components, $type = 'normal'
         }
         else {
           $questions = spcontact_questions();
+          $no = 0;
           foreach ($questions as $key => $question) {
-            $list['spcontact_' . $key] = 'SP Contact: ' . $question;
+            $list[$component_id . '|' . $no] = 'SP Contact: ' . $question;
+            $no++;
           }
         }
         break;

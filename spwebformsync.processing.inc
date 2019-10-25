@@ -68,7 +68,6 @@ function spwebformsync_process_submission($submission) {
     // Process contact data.
     // Parse autosync data.
     $data = spwebformsync_parse_submission($submission, $sync_data);
-
     // Parse other data.
     $data['overwrite'] = empty($sync_data['overwrite']['overwrite']) ? FALSE : TRUE;
     $data['source'] = $source;
@@ -149,7 +148,7 @@ function spwebformsync_parse_submission($submission, $sync_data) {
     if (!empty($sync_data[$key . '_component'])) {
       $component_id = $sync_data[$key . '_component'];
       $parts = explode('|', $component_id);
-      if (!empty($parts[1])) {
+      if (isset($parts[1])) {
         if (!empty($submission->data[$parts[0]][$parts[1]])) {
           $var = $submission->data[$parts[0]][$parts[1]];
         }
@@ -161,8 +160,6 @@ function spwebformsync_parse_submission($submission, $sync_data) {
       }
       if (!empty($var)) {
         $data[$key] = $var;
-      }
-      else {
       }
     }
   }
@@ -382,62 +379,72 @@ function spwebformsync_check_address_manually($street_and_number, $contact_id) {
 
 function spwebformsync_send_mails($sync_data, $submission, $webform) {
   $allowed_types = variable_get('spwebformsync_allowed_component_types', array());
+  if (module_exists('spcontact')) {
+    $allowed_types['spcontact'] = 'spcontact';
+  }
   $webform_components = spwebformsync_get_webform_allowed_components($webform->nid, $allowed_types);
   if (!empty($sync_data)) {
     if (!empty($sync_data['fixed_mail_text']['value'])) {
       // Send fixed mail.
       $subject = '';
       $fixed_mail_to_component = $sync_data['fixed_mail_to_component'];
-      if (!empty($submission->data[$fixed_mail_to_component])) {
-        $mailto = $submission->data[$fixed_mail_to_component][0];
-        if (empty($mailto)) {
-          $mailto = 'tdgraaff@sp.nl,' . variable_get('site_mail', ini_get('sendmail_from'));
-          $subject = 'Niet aan contact verzonden (e-mailadres contact onbekend): ';
+      $parts = explode('|', $fixed_mail_to_component);
+      if (isset($parts[1])) {
+        if (!empty($submission->data[$parts[0]][$parts[1]])) {
+          $mailto = $submission->data[$parts[0]][$parts[1]];
         }
-        if (!empty($mailto)) {
-          $text_raw = $sync_data['fixed_mail_text']['value'];
-          $filter_format = $sync_data['fixed_mail_text']['format'];
-          $text = check_markup($text_raw, $filter_format);
-          $subject .= $sync_data['fixed_mail_subject'];
-          $mailfrom = $sync_data['fixed_mail_sender_emailadress'];
-          spwebformsync_send_mail($submission, $webform, $subject, $text, $mailto, $mailfrom);
+      }
+      else {
+        if (!empty($submission->data[$component_id][0])) {
+          $mailto = $submission->data[$component_id][0];
         }
+      }
+      if (empty($mailto)) {
+        $mailto = 'tdgraaff@sp.nl,' . variable_get('site_mail', ini_get('sendmail_from'));
+        $subject = 'Niet aan contact verzonden (e-mailadres contact onbekend): ';
+      }
+      if (!empty($mailto)) {
+        $text_raw = $sync_data['fixed_mail_text']['value'];
+        $filter_format = $sync_data['fixed_mail_text']['format'];
+        $text = check_markup($text_raw, $filter_format);
+        $subject .= $sync_data['fixed_mail_subject'];
+        $mailfrom = $sync_data['fixed_mail_sender_emailadress'];
+        spwebformsync_send_mail($submission, $webform, $subject, $text, $mailto, $mailfrom);
       }
     }
 
     if (!empty($sync_data['variable_mail'])) {
       // Send variable mail.
-      $types = array(
-        'variable',
-      );
-      foreach ($types as $type) {
-        if (!empty($sync_data[$type . '_mail'])) {
-          $subject = '';
-          if ($type === 'variable') {
-            // Variable mail.
-            $mail_to_component = $sync_data[$type . '_mail_to_component'];
-            if (!empty($submission->data[$mail_to_component])) {
-              $mailto = $submission->data[$mail_to_component][0];
-              if (empty($mailto)) {
-                $mailto = 'tdgraaff@sp.nl,' . variable_get('site_mail', ini_get('sendmail_from'));
-                $subject = 'Niet aan contact verzonden (e-mailadres contact onbekend): ';
-              }
-              if (!empty($mailto)) {
-                foreach ($sync_data[$type . '_mail'] as $component_id => $to_mail_data) {
-                  if (!empty($submission->data[$component_id])) {
-                    foreach ($submission->data[$component_id] as $answer_key) {
-                      if (!empty($to_mail_data['values'][$answer_key]['mail']['value'])) {
-                        $data = $to_mail_data['values'][$answer_key];
-                        $text_raw = $data['mail']['value'];
-                        $filter_format = $data['mail']['format'];
-                        $text = check_markup($text_raw, $filter_format);
-                        $subject .= $data['subject'];
-                        $mailfrom = $data['sender'];
-                        spwebformsync_send_mail($submission, $webform, $subject, $text, $mailto, $mailfrom);
-                      }
-                    }
-                  }
-                }
+      $subject = '';
+      // Variable mail.
+      $mail_to_component = $sync_data['variable_mail_to_component'];
+      $parts = explode('|', $mail_to_component);
+      if (isset($parts[1])) {
+        if (!empty($submission->data[$parts[0]][$parts[1]])) {
+          $mailto = $submission->data[$parts[0]][$parts[1]];
+        }
+      }
+      else {
+        if (!empty($submission->data[$component_id][0])) {
+          $mailto = $submission->data[$component_id][0];
+        }
+      }
+      if (empty($mailto)) {
+        $mailto = 'tdgraaff@sp.nl,' . variable_get('site_mail', ini_get('sendmail_from'));
+        $subject = 'Niet aan contact verzonden (e-mailadres contact onbekend): ';
+      }
+      if (!empty($mailto)) {
+        foreach ($sync_data['variable_mail'] as $component_id => $to_mail_data) {
+          if (!empty($submission->data[$component_id])) {
+            foreach ($submission->data[$component_id] as $answer_key) {
+              if (!empty($to_mail_data['values'][$answer_key]['mail']['value'])) {
+                $data = $to_mail_data['values'][$answer_key];
+                $text_raw = $data['mail']['value'];
+                $filter_format = $data['mail']['format'];
+                $text = check_markup($text_raw, $filter_format);
+                $subject .= $data['subject'];
+                $mailfrom = $data['sender'];
+                spwebformsync_send_mail($submission, $webform, $subject, $text, $mailto, $mailfrom);
               }
             }
           }

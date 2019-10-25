@@ -116,8 +116,14 @@ function spwebformsync_admin_form($form, &$form_state, $form_id = NULL) {
           }
           elseif (module_exists('spcontact')) {
             // Set default sync fields for spcontact component.
-            if (!empty($webform_component_select_options['spcontact_' . $data_key])) {
-              $default_value = 'spcontact_' . $data_key;
+            $spcontact_questions = spcontact_questions();
+            foreach ($spcontact_questions as $spcontact_key => $question) {
+              if ($data_key == $spcontact_key) {
+                $default_value = array_search('SP Contact: ' . $question, $webform_component_select_options);
+                if (!empty($default_value)) {
+                  break;
+                }
+              }
             }
           }
         }
