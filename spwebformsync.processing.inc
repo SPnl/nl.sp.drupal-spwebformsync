@@ -616,7 +616,7 @@ function spwebformsync_datadrop($data, $debug_info, $source_data) {
   $url = variable_get('spwebformsync_datadrop_server') . '/spdatadrop';
   $secret = variable_get('spwebformsync_datadrop_secret');
   $data_to_send = array(
-    'submission_data' => $data,
+    'submission_data' => json_encode($data),
     'source_data' => $source_data,
     'debug_info' => $debug_info,
     'secret' => $secret,
