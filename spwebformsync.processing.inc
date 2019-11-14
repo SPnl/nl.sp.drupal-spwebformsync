@@ -668,7 +668,7 @@ function spwebformsync_parse_activities($webform, $submission) {
             // Parse active.
             $data_to_parse = $submission->data[$key];
             $first_element = array_shift($data_to_parse);
-            if (!empty($first_element)) {
+            if (isset($first_element)) {
               $parsed_data['active'] = empty($first_element) ? '' : $first_element;
               $parsed_data['activities'] = array();
               foreach ($data_to_parse as $activity) {
