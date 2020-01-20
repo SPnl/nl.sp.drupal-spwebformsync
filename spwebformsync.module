@@ -32,11 +32,11 @@ function spwebformsync_menu() {
     'weight' => '0',
   );
 
-  $items['admin/config/sp/spwebformsync/configure'] = array(
+  $items['admin/config/sp/spwebformsync/configure/%'] = array(
     'title' => 'SP webformulier synchronisatie toevoegen of bewerken',
     'type' => MENU_LOCAL_TASK,
     'page callback' => 'drupal_get_form',
-    'page arguments' => array('spwebformsync_admin_form', arg(4)),
+    'page arguments' => array('spwebformsync_admin_form', 5),
     'file' => 'spwebformsync.admin.inc',
     'access callback' => 'spwebformsync_access_check',
   );
