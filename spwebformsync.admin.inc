@@ -51,6 +51,11 @@ function spwebformsync_admin_form($form, &$form_state, $form_id = NULL) {
     $form['webform']['#default_value'] = $webform_default;
     unset($form['webform']['#empty_option']);
 
+    // When on node page, don't edit.
+    if (arg(0) === 'node') {
+      $form['webform']['#disabled'] = 'disabled';
+    }
+
 
     $allowed_types = variable_get('spwebformsync_allowed_component_types', array());
     // Always allow spcontact component.
@@ -443,7 +448,7 @@ function spwebformsync_admin_form($form, &$form_state, $form_id = NULL) {
         '#collapsible' => TRUE,
         '#collapsed' => TRUE,
       );
-      $fixed_mail_to_component = $sync_data[$webform->nid]['fixed_mail_to_component'];
+      $fixed_mail_to_component = empty($sync_data[$webform->nid]) ? NULL : $sync_data[$webform->nid]['fixed_mail_to_component'];
       $default_value = empty($fixed_mail_to_component) ? array_search('E-mail', $webform_component_select_options) : $fixed_mail_to_component;
       $form['fixed_mail']['fixed_mail_to_component'] = array(
         '#type' => 'select',
@@ -520,7 +525,7 @@ function spwebformsync_admin_form($form, &$form_state, $form_id = NULL) {
           '#collapsed' => TRUE,
         );
         $form[$type . '_mail']['#title'] = 'Email naar contact: antwoordafhankelijk';
-        $variable_mail_component = $sync_data[$webform->nid][$type . '_mail_to_component'];
+        $variable_mail_component = empty($sync_data[$webform->nid]) ? NULL : $sync_data[$webform->nid][$type . '_mail_to_component'];
         $default_value = empty($variable_mail_component) ? array_search('E-mail', $webform_component_select_options) : $variable_mail_component;
         $form[$type . '_mail'][$type . '_mail_mail_to_component'] = array(
           '#type' => 'select',
@@ -983,7 +988,6 @@ function spwebformsync_admin_form_submit($form, &$form_state) {
   }
   variable_set('spwebformsync_sync_data', $sync_data);
   drupal_set_message('SP webformulier synchronisatie is toegevoegd.');
-  $form_state['redirect'] = 'admin/config/sp/spwebformsync';
 }
 
 function spwebformsync_settings_form($form, &$form_state) {

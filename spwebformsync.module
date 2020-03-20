@@ -76,7 +76,43 @@ function spwebformsync_menu() {
     'access arguments' => array('access content'),
   );
 
+  $items['node/%spwebformsync_menu/webformsync'] = array(
+    'title' => 'SP webformulier synchronisatie',
+    'type' => MENU_LOCAL_TASK,
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('spwebformsync_admin_form', 1),
+    'file' => 'spwebformsync.admin.inc',
+    'access callback' => 'spwebformsync_access_check',
+    'weight' => 10,
+  );
+
   return $items;
+}
+
+/**
+ * Implements hook_admin_paths().
+ */
+function spwebformsync_admin_paths() {
+  if (variable_get('node_admin_theme')) {
+    return array(
+      'node/*/webformsync' => TRUE,
+      'node/*/webformsync/*' => TRUE,
+    );
+  }
+}
+
+/**
+ * Menu loader callback. Load a webform node if the given nid is a webform.
+ */
+function spwebformsync_menu_load($nid) {
+  if (!is_numeric($nid)) {
+    return FALSE;
+  }
+  $node = node_load($nid);
+  if (!isset($node->type) || !variable_get('webform_node_' . $node->type, FALSE)) {
+    return FALSE;
+  }
+  return $nid;
 }
 
 /**
