@@ -3,7 +3,7 @@
 function spwebformsync_admin_form($form, &$form_state, $form_id = NULL) {
   $values = empty($form_state['values']) ? array() : $form_state['values'];
   $sync_data = variable_get('spwebformsync_sync_data', array());
-  if (!empty((int) $form_id)) {
+  if (empty($values) && !empty((int) $form_id)) {
     $webform_default = (int) $form_id;
     spwebformsync_store_sync_data($form_state, $webform_default);
   }
