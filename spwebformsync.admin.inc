@@ -63,7 +63,7 @@ function spwebformsync_admin_form($form, &$form_state, $form_id = NULL) {
       $allowed_types['spcontact'] = 'spcontact';
     }
 
-    $data_names = spwebformsync_civi_fields();
+    $data_names = spwebformsync_contact_data_fields();
     $webform_components = spwebformsync_get_webform_allowed_components($webform_default, $allowed_types);
     if (!empty($webform_components)) {
 
@@ -121,7 +121,7 @@ function spwebformsync_admin_form($form, &$form_state, $form_id = NULL) {
           }
           elseif (module_exists('spcontact')) {
             // Set default sync fields for spcontact component.
-            $spcontact_questions = spcontact_questions();
+            $spcontact_questions = spcontact_text_questions();
             foreach ($spcontact_questions as $spcontact_key => $question) {
               if ($data_key == $spcontact_key) {
                 $default_value = array_search('SP Contact: ' . $question, $webform_component_select_options);
@@ -1000,26 +1000,6 @@ function spwebformsync_settings_form($form, &$form_state) {
     '#title' => 'Sync instellingen',
   );
 
-  $form['spwebformsync_sync_settings']['spwebformsync_datadrop_server'] = array(
-    '#type' => 'textfield',
-    '#title' => 'Datadrop server (url)',
-    '#default_value' => variable_get('spwebformsync_datadrop_server', ''),
-  );
-
-  $form['spwebformsync_sync_settings']['spwebformsync_datadrop_secret'] = array(
-    '#type' => 'textfield',
-    '#title' => 'Geheime sleutel',
-    '#description' => 'This secret must match the secret set in the spdatadrop module on the datadrop server.',
-    '#default_value' => variable_get('spwebformsync_datadrop_secret', ''),
-  );
-
-  $form['spwebformsync_sync_settings']['spwebformsync_datadrop_secret_unsubscribe'] = array(
-    '#type' => 'textfield',
-    '#title' => 'Geheime sleutel voor uitschrijf link',
-    '#description' => 'This secret must match the unsubscribe secret set in the spdatadrop module on the datadrop server.',
-    '#default_value' => variable_get('spwebformsync_datadrop_secret_unsubscribe', ''),
-  );
-
   $form['spwebformsync_sync_settings']['spwebformsync_sync_type'] = array(
     '#type' => 'radios',
     '#title' => 'Wanneer wilt u contacten synchroniseren?',
@@ -1273,7 +1253,7 @@ function spwebformsync_overview() {
 
   // Show syncs.
   if (!empty($sync_data)) {
-    $data_names = spwebformsync_civi_fields();
+    $data_names = spwebformsync_contact_data_fields();
     $markup .= '<table><tr><th>Webformulier</th><th>Webformulier &#8594; Civicrm</th><th>Vaste groepen</th><th>Variabele groepselecties</th><th>Cron wachtrij</th><th></th></tr>';
     foreach ($sync_data as $data) {
       $form = node_load($data['webform']);

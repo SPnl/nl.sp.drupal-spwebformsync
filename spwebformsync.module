@@ -228,8 +228,9 @@ function spwebformsync_mail($key, &$message, $params) {
     $message['body'][] = '(Dit is een automatisch gegenereerd bericht).';
     break;
   case 'error':
-    $message['subject'] = 'Webform inzending datadrop mislukt';
+    $message['subject'] = 'Er is een fout opgetreden bij het verwerken van een webform inzending.';
     $message['body'][] = format_string($params['content'], $params['data']);
+    break;
   case 'sync_mail':
     $message['subject'] = $params['subject'];
     $message['body'][] = $params['text'];

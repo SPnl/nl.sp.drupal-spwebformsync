@@ -13,103 +13,23 @@ function spwebformsync_process_submission($submission) {
     watchdog('spwebformsync', 'Processing submission nr. ' . $submission->sid);
     $sync_data = $sync_data_all[$submission->nid];
 
-    // Get source.
-    // Create contact source line.
+    // Get debug info.
     $webform = node_load($sync_data['webform']);
-    // Get link secret from component.
-    $link_secret_component = spwebformsync_get_cid_by_form_key($webform, 'sp_unsubscribe_link_secret');
-    $link_secret = '';
-    if ($link_secret_component !== FALSE) {
-      if (!empty($submission->data[$link_secret_component])) {
-        $link_secret = $submission->data[$link_secret_component][0];
-      }
-    }
-    // Get source url from component.
-    $source_url_component = spwebformsync_get_cid_by_form_key($webform, 'source_url');
-    $source_url = '';
-    if ($source_url_component !== FALSE) {
-      if (!empty($submission->data[$source_url_component])) {
-        $source_url = ', url: ' . $submission->data[$source_url_component][0];
-      }
-    }
     $site_name = variable_get('site_name');
     global $base_url;
     $parsed_webform_url = parse_url($base_url);
-    $source = 'SP webformsync: ' . $webform->title . ' (domain: ' . $parsed_webform_url['host'] . ', id: ' . $webform->nid . ', sid: ' . $submission->sid . $source_url . ')';
-    $source_data = array(
+    $debug_info = array(
       'source_domain' => $parsed_webform_url['host'],
       'source_title' => $webform->title,
       'source_id' => $webform->nid,
       'source_ip' => $submission->remote_addr,
       'submission_id' => $submission->sid,
-      'secret' => $link_secret,
+      'remote_addr' => $submission->remote_addr,
     );
-
-    // Process spreferal.
-    if (!empty($sync_data['sprefer_field']) && !empty($sync_data['sprefer_group'])) {
-      $error = FALSE;
-      // Process SP Referal.
-      $referal_id = $submission->data[$sync_data['sprefer_field']][0];
-      $data = array(
-        'contact_id' => $referal_id,
-        'source' => $source,
-      );
-      $groups = array($sync_data['sprefer_group'] => $sync_data['sprefer_group']);
-      $data['groups'] = $groups;
-
-      $result = spwebformsync_datadrop($data, $submission, $source_data);
-      if ($result === FALSE) {
-        spwebformsync_store_submission_sync_state($submission->nid, $submission->sid, 'error');
-        watchdog('spwebformsync', 'Processed submission nr. ' . $submission->sid);
-        return;
-      }
-    }
 
     // Process contact data.
     // Parse autosync data.
     $data = spwebformsync_parse_submission($submission, $sync_data);
-    // Parse other data.
-    $data['overwrite'] = empty($sync_data['overwrite']['overwrite']) ? FALSE : TRUE;
-    $data['source'] = $source;
-    $data['author'] = $submission->name;
-    $data['remote_addr'] = $submission->remote_addr;
-
-    // Notes.
-    if (!empty($sync_data['notes'])) {
-      foreach ($sync_data['notes'] as $key => $note_data) {
-        $note_content = '';
-        $note_use = array();
-        if (count($note_data['note_fields']) > 1) {
-          foreach ($note_data['note_fields'] as $component_id) {
-            if (!empty($submission->data[$component_id])) {
-              $submitted_data = $submission->data[$component_id];
-              if (!empty($submitted_data)) {
-                $field_content = check_markup(reset($submitted_data), 'filtered_html');
-                if (!empty($field_content)) {
-                  $note_content .= '<div class="note_content">' . $field_content . '</div>';
-                }
-              }
-            }
-          }
-        }
-        else {
-          $component_id = array_pop($note_data['note_fields']);
-          if (!empty($submission->data[$component_id])) {
-            $submitted_data = $submission->data[$component_id];
-            if (!empty($submitted_data)) {
-              $field_content = check_markup(reset($submitted_data), 'filtered_html');
-              if (!empty($field_content)) {
-                $note_content = $field_content;
-              }
-            }
-          }
-        }
-        if (!empty($note_content)) {
-          $data['notes'][$key]['note_content'] = $note_content;
-          $data['notes'][$key]['note_use'] = empty($note_data['note_use']) ? array() : $note_data['note_use'];
-        }
-      }
-    }
 
     // Parse groups.
     $groups = spwebformsync_parse_groups($submission, $sync_data);
@@ -131,8 +51,8 @@ function spwebformsync_process_submission($submission) {
       }
     }
 
-    // Sync submission to CiviCRM.
-    $result = spwebformsync_datadrop($data, $submission, $source_data);
+    // Sync submission to Procurios.
+    $result = procpush_push_contact($data, $debug_info);
     spwebformsync_push_contact_process_result($result, $submission, $sync_data, $webform);
   }
 }
@@ -142,7 +62,7 @@ function spwebformsync_process_submission($submission) {
  */
 function spwebformsync_parse_submission($submission, $sync_data) {
   $data = array();
-  $sync_items = spwebformsync_civi_fields();
+  $sync_items = spwebformsync_contact_data_fields();
   foreach ($sync_items as $key => $name) {
     $var = '';
     if (!empty($sync_data[$key . '_component'])) {
@@ -525,15 +445,15 @@ function spwebformsync_push_contact_process_result($result, $submission, $sync_d
   }
   else {
     spwebformsync_store_submission_sync_state($submission->nid, $submission->sid, 'error');
-    $error = TRUE;
+    $error = $result;
   }
   watchdog('spwebformsync', 'Processed submission nr. '.$submission->sid);
   return $error;
 }
 
-function spwebformsync_civi_fields() {
+function spwebformsync_contact_data_fields() {
   $data_names = array(
-    'contact_id' => 'Contact id',
+    'contact_id' => 'contact id',
     'name' => 'gehele naam',
     'first_name' => 'voornaam',
     'middle_name' => 'tussenvoegsel',
@@ -541,9 +461,8 @@ function spwebformsync_civi_fields() {
     'email' => 'e-mail',
     'telephone' => 'telefoon',
     'street' => 'straat',
-    'house_number' => 'huisnummer (inc. toevoeging)',
+    'house_number' => 'huisnummer',
     'house_number_addition' => 'huisnummer toevoeging',
-    'street_and_number' => 'straat en huisnummer',
     'postal_code' => 'postcode',
     'locality' => 'plaats',
   );
@@ -553,6 +472,8 @@ function spwebformsync_civi_fields() {
 /**
  * Push contact to datadrop.
  *
+ * Fields defined by spwebformsync_contact_data_fields().
+ *
  * Data: array()
  *   keys:
  *     - contact_id
@@ -560,45 +481,14 @@ function spwebformsync_civi_fields() {
  *     - first_name
  *     - middle_name
  *     - last_name
- *     - initials
- *     - birth_date (1974-01-28)
- *     - gender (m,v,a)
  *     - email
  *     - telephone
- *     - phone_mobile
  *     - street
  *     - house_number
  *     - house_number_addition
- *     - street_and_number
  *     - postal_code
  *     - locality
- *     - country (NL)
- *     - notes: array(
- *         array(
- *           note_content,
- *           note_use: array(
- *             intern
- *           )
- *         )
- *         array(
- *           note_content
- *           note_use: array(
- *           )
- *         )
- *         ...
- *       )
- *     - overwrite
- *     - author
- *     - source
- *     - groups: array(group_id_1, group_id_2, etc.)
- *     - sp_active: array(
- *         active,
- *         activities: array(
- *         )
- *       )
  *
- *
- * debug_info: variable content shown in logs.
  */
 function spwebformsync_datadrop($data, $debug_info, $source_data) {
   global $base_url;
