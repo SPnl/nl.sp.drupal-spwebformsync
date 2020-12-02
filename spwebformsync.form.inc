@@ -53,51 +53,8 @@ function spwebformsync_get_webform_allowed_components($nid, $allowed_types) {
 }
 
 function spwebformsync_get_civi_groups($sync = TRUE) {
-  if ($sync) {
-    $groups = &drupal_static(__FUNCTION__);
-    if (!isset($groups)) {
-
-      if ($cache = cache_get('spwebformsync_civi_groups')) {
-        $groups = $cache->data;
-      }
-      else {
-        $groups = array();
-        set_time_limit(0);
-        $spcivi = \SPCivi::getInstance();
-        $params = array(
-          'sequential'            => 1,
-          'option.limit'          => 9999,
-          'return'                => array('id', 'title'),
-        );
-        $groups_results = $spcivi->api('Group', 'get', $params);
-        if (_spcf_check_result($groups_results, 'groepen', 'get', $params)) {
-          if (!empty($groups_results['values'])) {
-            foreach ($groups_results['values'] as $value) {
-              if (
-                empty($value['group_type']) ||
-                (array_key_exists(0, $value['group_type']) && empty($value['group_type'][0])) ||
-                in_array('2', $value['group_type'])
-              ) {
-                if (!empty($value['id']) && !empty($value['title'])) {
-                  $groups[$value['id']] = $value['title'];
-                }
-              }
-            }
-            asort($groups);
-            variable_set('spwebformsync_civi_groups', $groups);
-          }
-          else {
-            drupal_set_message('Error syncing civicrm groups, using saved data.', 'warning');
-          }
-        }
-      }
-      $groups = variable_get('spwebformsync_civi_groups', array());
-      cache_set('spwebformsync_civi_groups', $groups, 'cache', time() + 3600);
-    }
-    return $groups;
-  }
-  $groups = variable_get('spwebformsync_civi_groups', array());
-  return $groups;
+  $selections = procapi_selection_get_select_list();
+  return $selections;
 }
 
 function spwebformsync_parse_webform_select_options($webform, $selected_component) {

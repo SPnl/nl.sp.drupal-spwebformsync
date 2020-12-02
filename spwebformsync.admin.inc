@@ -185,84 +185,6 @@ function spwebformsync_admin_form($form, &$form_state, $form_id = NULL) {
         }
       }
 
-
-      // Add note selection.
-      // -----------------------------------------------------------------
-      $note_use_options = array(
-        'intern' => 'Intern',
-        'telefoongesprek' => 'Telefoongesprek',
-        'algemeen' => 'Algemeen',
-      );
-
-      $form['note_select'] = array(
-        '#type' => 'fieldset',
-        '#title' => 'Notities.',
-        '#collapsible' => TRUE,
-        '#collapsed' => TRUE,
-      );
-
-      // Show stored notes.
-      if (!empty($form_state['storage']['notes'])) {
-        $form['note_select']['#collapsed'] = FALSE;
-        $markup = '<p><strong>Geselecteerd:</strong><br/>';
-        foreach ($form_state['storage']['notes'] as $key => $note) {
-          $fieldlist = array();
-          $uselist = array();
-          foreach($note['note_fields'] as $field) {
-            $fieldlist[] = check_plain($webform_component_select_options[$field]);
-          }
-          foreach($note['note_use'] as $note_use) {
-            $uselist[] = check_plain($note_use_options[$note_use]);
-          }
-          $markup .= '<p><strong>Notitie ' . ($key + 1) . '</strong><br/>Velden: ' . implode(', ', $fieldlist) . '<br/>';
-          $markup .= 'Gebruik: ' . implode(', ', $uselist) . '<br/></p>';
-        }
-      }
-      else {
-        $markup = '';
-      }
-
-      $form['note_select']['selected_notes'] = array(
-        '#type' => 'markup',
-        '#markup' => $markup,
-      );
-
-      $form['note_select']['note_fields'] = array(
-        '#type' => 'select',
-        '#title' => 'Notitie velden.',
-        '#options' => $webform_component_select_options,
-        '#multiple' => TRUE,
-        '#empty_option' => '- Geen -',
-      );
-
-      $form['note_select']['note_use'] = array(
-        '#type' => 'select',
-        '#title' => 'Notitie gebruik',
-        '#options' => $note_use_options,
-        '#multiple' => TRUE,
-        '#empty_option' => '- Geen -',
-      );
-
-      $form['note_select']['add_note'] = array(
-        '#type' => 'button',
-        '#value' => 'Voeg notitie toe',
-        '#name' => 'add_note',
-        '#ajax' => array(
-          'wrapper' => 'spwebformsync_ajax_form',
-          'callback' => 'spwebformsync_ajax_form_callback',
-        ),
-      );
-
-      $form['note_select']['reset_notes'] = array(
-        '#type' => 'button',
-        '#value' => 'Leeg selectie',
-        '#name' => 'reset_notes',
-        '#ajax' => array(
-          'wrapper' => 'spwebformsync_ajax_form',
-          'callback' => 'spwebformsync_ajax_form_callback',
-        ),
-      );
-
       // Add group selection.
       // -----------------------------------------------------------------
 
@@ -271,14 +193,14 @@ function spwebformsync_admin_form($form, &$form_state, $form_id = NULL) {
 
       $form['fixed_group_select'] = array(
         '#type' => 'fieldset',
-        '#title' => 'Selecteer CiviCRM groep(en) waar het contact altijd aan moet worden toegevoegd (optioneel)',
+        '#title' => 'Voeg het contact altijd toe aan de volgende selectie(s):',
         '#collapsible' => TRUE,
         '#collapsed' => TRUE,
       );
       // Show message.
       $form['fixed_group_select']['message_cache'] = array(
         '#type' => 'markup',
-        '#markup' => '<p><strong>Leeg de Drupal cache als een CiviCRM groep niet te vinden is!</strong></p>',
+        '#markup' => '<p><strong>Leeg de Drupal cache als een Procurios selectie niet te vinden is!</strong></p>',
       );
       // Show stored groups.
       if (!empty($form_state['storage']['selected_fixed_groups'])) {
@@ -297,7 +219,7 @@ function spwebformsync_admin_form($form, &$form_state, $form_id = NULL) {
       );
       $form['fixed_group_select']['fixed_group'] = array(
         '#type' => 'textfield',
-        '#title' => 'Selecteer groep',
+        '#title' => 'Selectie',
         '#autocomplete_path' => 'spwebformsync/group/autocomplete',
       );
 
@@ -325,7 +247,7 @@ function spwebformsync_admin_form($form, &$form_state, $form_id = NULL) {
       // --------------------------------------------------------------------
       $form['variable_group_select'] = array(
         '#type' => 'fieldset',
-        '#title' => 'Synchroniseer webformulier selectie veldwaarden naar CiviCRM groepen (optioneel)',
+        '#title' => 'Voeg het contact afhankelijk van gemaakte keuzes toe aan de volgende selectie(s):',
         '#collapsible' => TRUE,
         '#collapsed' => TRUE,
       );
@@ -354,7 +276,7 @@ function spwebformsync_admin_form($form, &$form_state, $form_id = NULL) {
             // Get default value.
             $form['variable_group_select']['component_'.$component_key]['component_'.$component_key.'_value_'.$key] = array(
               '#type' => 'textfield',
-              '#title' => '"'.$name.'" toevoegen aan CiviCRM groep:',
+              '#title' => '"'.$name.'" toevoegen aan Procurios selectie:',
               '#autocomplete_path' => 'spwebformsync/group/autocomplete',
               '#default_value' => $default,
             );
@@ -392,49 +314,6 @@ function spwebformsync_admin_form($form, &$form_state, $form_id = NULL) {
       else {
         $form['variable_group_select']['variable_group_select_no_components'] = array(
           '#markup' => '<p>Er zijn geen geschikte webformulier velden (meer) beschikbaar.</p>',
-        );
-      }
-
-      // SP Refer sync.
-      // ----------------------------------------------------------------------------------
-      $webform_components = spwebformsync_get_webform_allowed_components($webform_default, $allowed_types);
-      if (!empty($webform_components)) {
-        $webform_component_select_options = spwebformsync_get_components_list($webform_components);
-        $form['sprefer_fieldset'] = array(
-          '#type' => 'fieldset',
-          '#title' => 'SP Referal formulier synchronisatie (optioneel)',
-          '#description' => 'Selecteer het veld waarin het CiviCRM contactnummer dat in de url van het formulier is meegegeven wordt opgeslagen. Kies vervolgens de groep waar dit contact in CiviCRM moet worden toegevoegd.',
-          '#collapsible' => TRUE,
-          '#collapsed' => TRUE,
-        );
-
-        if (!empty($sync_data[$webform->nid]['sprefer_field'])) {
-          $default = $sync_data[$webform->nid]['sprefer_field'];
-          $form['sprefer_fieldset']['#collapsed'] = FALSE;
-        }
-        else {
-          $default = '';
-        }
-        $form['sprefer_fieldset']['sprefer_field'] = array(
-          '#type' => 'select',
-          '#title' => 'Formulier veld',
-          '#options' => $webform_component_select_options,
-          '#empty_option' => '- Geen -',
-          '#default_value' => $default,
-        );
-
-        if (!empty($sync_data[$webform->nid]['sprefer_group'])) {
-          $sprefer_group = $sync_data[$webform->nid]['sprefer_group'];
-          $default = $groups[$sprefer_group] . ' (' . $sprefer_group . ')';
-        }
-        else {
-          $default = '';
-        }
-        $form['sprefer_fieldset']['sprefer_group'] = array(
-          '#type' => 'textfield',
-          '#title' => 'Selecteer groep',
-          '#autocomplete_path' => 'spwebformsync/group/autocomplete',
-          '#default_value' => $default,
         );
       }
 
@@ -674,24 +553,6 @@ function spwebformsync_admin_form_validate($form, &$form_state) {
       spwebformsync_store_sync_data($form_state, $webform);
       return;
       break;
-    case 'add_note':
-      // Store selected group.
-      if (!empty($form_state['values']['note_fields'])) {
-        $form_state['storage']['notes'][] = array(
-          'note_fields' => $form_state['values']['note_fields'],
-          'note_use' => $form_state['values']['note_use'],
-        );
-        $form_state['input']['note_fields'] = '';
-        $form_state['input']['note_use'] = '';
-      }
-      $form_state['rebuild'] = TRUE;
-      return;
-      break;
-    case 'reset_notes':
-      unset($storage['notes']);
-      $form_state['rebuild'] = TRUE;
-      return;
-      break;
     case 'reset_fixed_groups':
       unset($storage['selected_fixed_groups']);
       $form_state['rebuild'] = TRUE;
@@ -735,18 +596,6 @@ function spwebformsync_admin_form_validate($form, &$form_state) {
         $send = FALSE;
         form_set_error('fixed_mail_subject', 'Geef de mail een onderwerp.');
       }
-      /*
-       * Disable email validation, Thomas de Graaff <tdgraaff@sp.nl> should be allowed.
-       *
-      if (!valid_email_address($values['fixed_mail_sender_emailadress'])) {
-        $send = FALSE;
-        form_set_error('fixed_mail_sender_emailadress', 'Vul een geldig e-mailadres in.');
-      }
-      if (!valid_email_address($values['fixed_mail_test_emailadress'])) {
-        $send = FALSE;
-        form_set_error('fixed_mail_test_emailadress', 'Vul een geldig e-mailadres in.');
-      }
-       */
       if ($send) {
         // Send mail
         $site_mail = variable_get('site_mail', ini_get('sendmail_from'));
@@ -829,17 +678,6 @@ function spwebformsync_admin_form_validate($form, &$form_state) {
           $send = FALSE;
           form_set_error($subject_field, 'Geef de mail een onderwerp.');
         }
-	/*
-	 * Disable validation: Thomas de Graaff <tdgraaff@sp.nl> should be allowed.
-        if (!valid_email_address($values[$sender_address_field])) {
-          $send = FALSE;
-          form_set_error($sender_address_field, 'Vul een geldig e-mailadres in.');
-        }
-        if (!valid_email_address($values[$test_address_field])) {
-          $send = FALSE;
-          form_set_error($test_address_field, 'Vul een geldig e-mailadres in.');
-        }
-	 */
         if ($send) {
           // Send mail
           $site_mail = variable_get('site_mail', ini_get('sendmail_from'));
@@ -903,7 +741,6 @@ function spwebformsync_admin_form_submit($form, &$form_state) {
     'fixed_mail_text',
     'fixed_mail_subject',
     'fixed_mail_sender_emailadress',
-    'sprefer_field',
   );
   $storage_values = array(
     'selected_fixed_groups',
@@ -931,12 +768,6 @@ function spwebformsync_admin_form_submit($form, &$form_state) {
   if (isset($values['overwrite'])) {
     $sync_data[$values['webform']]['overwrite'] = $values['overwrite'];
   }
-  // Store sprefer group.
-  $group = spwebformsync_parse_group_form_select_value($values['sprefer_group']);
-  $sync_data[$values['webform']]['sprefer_group'] = $group;
-
-  // Store notes.
-  $sync_data[$values['webform']]['notes'] = empty($form_state['storage']['notes']) ? array() : $form_state['storage']['notes'];
 
   // Store selected variable group syncs.
   foreach ($values as $key => $value) {
@@ -1254,7 +1085,7 @@ function spwebformsync_overview() {
   // Show syncs.
   if (!empty($sync_data)) {
     $data_names = spwebformsync_contact_data_fields();
-    $markup .= '<table><tr><th>Webformulier</th><th>Webformulier &#8594; Civicrm</th><th>Vaste groepen</th><th>Variabele groepselecties</th><th>Cron wachtrij</th><th></th></tr>';
+    $markup .= '<table><tr><th>Webformulier</th><th>Webformulier &#8594; Civicrm</th><th>Vaste selecties</th><th>Keuze-afhankelijke selecties</th><th>Cron wachtrij</th><th></th></tr>';
     foreach ($sync_data as $data) {
       $form = node_load($data['webform']);
       if (!empty($form)) {

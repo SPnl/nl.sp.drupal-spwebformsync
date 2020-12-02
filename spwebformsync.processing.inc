@@ -33,7 +33,7 @@ function spwebformsync_process_submission($submission) {
 
     // Parse groups.
     $groups = spwebformsync_parse_groups($submission, $sync_data);
-    $data['groups'] = $groups;
+    $data['selections'] = $groups;
 
     if (module_exists('sp_active')) {
       // Add sp_active activity data if available.
@@ -452,22 +452,10 @@ function spwebformsync_push_contact_process_result($result, $submission, $sync_d
 }
 
 function spwebformsync_contact_data_fields() {
-  $data_names = array(
-    'contact_id' => 'contact id',
-    'name' => 'gehele naam',
-    'first_name' => 'voornaam',
-    'middle_name' => 'tussenvoegsel',
-    'last_name' => 'achternaam',
-    'email' => 'e-mail',
-    'telephone' => 'telefoon',
-    'street' => 'straat',
-    'house_number' => 'huisnummer',
-    'house_number_addition' => 'huisnummer toevoeging',
-    'postal_code' => 'postcode',
-    'locality' => 'plaats',
-  );
-  return $data_names;
+  $data_fields = procpush_data_fields();
+  return $data_fields;
 }
+
 
 /**
  * Parses activity data from submission for sending to spcivipush module.
