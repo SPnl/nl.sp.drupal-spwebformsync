@@ -33,7 +33,7 @@ function spwebformsync_process_submission($submission) {
 
     // Parse groups.
     $groups = spwebformsync_parse_groups($submission, $sync_data);
-    $data['selections'] = $groups;
+    $data['selections']['add'] = $groups;
 
     if (module_exists('sp_active')) {
       // Add sp_active activity data if available.
@@ -452,7 +452,7 @@ function spwebformsync_push_contact_process_result($result, $submission, $sync_d
 }
 
 function spwebformsync_contact_data_fields() {
-  $data_fields = procpush_data_fields();
+  $data_fields = procpush_data_fields_flat_list();
   return $data_fields;
 }
 
