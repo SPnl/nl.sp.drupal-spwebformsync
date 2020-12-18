@@ -5,7 +5,7 @@ package = sprbs
 dependencies[] = sprbs
 dependencies[] = webform
 dependencies[] = webform_confirm_email
-dependencies[] = spciviapi
 dependencies[] = procpush
+dependencies[] = procapi
 
 stylesheets[all][] = css/spwebformsync.css
