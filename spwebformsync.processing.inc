@@ -56,6 +56,7 @@ function spwebformsync_process_submission($submission) {
 
     // Sync submission to Procurios.
     $result = procpush_push_contact($data, $debug_info);
+    dpm($result);
     spwebformsync_push_contact_process_result($result, $submission, $sync_data, $webform);
   }
 }
@@ -442,16 +443,16 @@ function spwebformsync_send_mail($submission, $webform, $subject, $text, $mailto
 
 function spwebformsync_push_contact_process_result($result, $submission, $sync_data, $webform) {
   $error = FALSE;
-  if ($result === TRUE) {
+  if ($result) {
     spwebformsync_store_submission_sync_state($submission->nid, $submission->sid, 'synced');
     spwebformsync_send_mails($sync_data, $submission, $webform);
+    watchdog('spwebformsync', 'Succesfully pushed submission.');
   }
   else {
     spwebformsync_store_submission_sync_state($submission->nid, $submission->sid, 'error');
-    $error = $result;
+    watchdog('spwebformsync', 'Error occurred pushing contact.');
   }
   watchdog('spwebformsync', 'Processed submission nr. '.$submission->sid);
-  return $error;
 }
 
 function spwebformsync_contact_data_fields() {
