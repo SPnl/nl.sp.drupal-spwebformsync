@@ -56,7 +56,6 @@ function spwebformsync_process_submission($submission) {
 
     // Sync submission to Procurios.
     $result = procpush_push_contact($data, $debug_info);
-    dpm($result);
     spwebformsync_push_contact_process_result($result, $submission, $sync_data, $webform);
   }
 }
