@@ -86,7 +86,7 @@ function spwebformsync_admin_form($form, &$form_state, $form_id = NULL) {
           if (module_exists('spbellen') && spbellen_is_spbellen_form($webform->nid)) {
             // Set default sync fields for beltool.
             switch ($data_key) {
-              case 'contact_id':
+              case 'contact_number':
                 $default_value = array_search('CRM contact id (verborgen)', $webform_component_select_options);
                 break;
 
@@ -98,7 +98,7 @@ function spwebformsync_admin_form($form, &$form_state, $form_id = NULL) {
                 $default_value = array_search('E-mail', $webform_component_select_options);
                 break;
 
-              case 'telephone':
+              case 'phone':
                 $default_value = array_search('Telefoonnummer', $webform_component_select_options);
                 break;
 
