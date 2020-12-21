@@ -445,11 +445,11 @@ function spwebformsync_push_contact_process_result($result, $submission, $sync_d
   if ($result) {
     spwebformsync_store_submission_sync_state($submission->nid, $submission->sid, 'synced');
     spwebformsync_send_mails($sync_data, $submission, $webform);
-    watchdog('spwebformsync', 'Succesfully pushed submission.');
+    watchdog('spwebformsync', 'Succesfully pushed submission (' . $submission->sid . ') to Procurios (' . $result . ').');
   }
   else {
     spwebformsync_store_submission_sync_state($submission->nid, $submission->sid, 'error');
-    watchdog('spwebformsync', 'Error occurred pushing contact.');
+    watchdog('spwebformsync', 'Error pushing submission (' . $submission->sid . ') to Procurios.');
   }
   watchdog('spwebformsync', 'Processed submission nr. '.$submission->sid);
 }
