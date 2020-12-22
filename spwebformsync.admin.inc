@@ -81,6 +81,12 @@ function spwebformsync_admin_form($form, &$form_state, $form_id = NULL) {
         $default_value = '';
         if (!empty($sync_data[$webform->nid][$data_key . '_component'])) {
           $default_value = $sync_data[$webform->nid][$data_key . '_component'];
+          // Unset erratic house number field.
+          if (module_exists('spbellen') && spbellen_is_spbellen_form($webform->nid)) {
+            if ($data_key == 'house_number') {
+              $default_value = '';
+            }
+          }
         }
         else {
           if (module_exists('spbellen') && spbellen_is_spbellen_form($webform->nid)) {
