@@ -106,7 +106,7 @@ function spwebformsync_admin_form($form, &$form_state, $form_id = NULL) {
                 $default_value = array_search('Adresinformatie: Straat', $webform_component_select_options);
                 break;
 
-              case 'house_number':
+              case 'house_number_and_addition':
                 $default_value = array_search('Adresinformatie: Huisnummer', $webform_component_select_options);
                 break;
 
