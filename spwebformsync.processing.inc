@@ -36,7 +36,9 @@ function spwebformsync_process_submission($submission) {
 
     // Parse groups.
     $groups = spwebformsync_parse_groups($submission, $sync_data);
-    $data['selections']['add'] = $groups;
+    if (!empty($groups)) {
+      $data['selections']['add'] = $groups;
+    }
 
     if (module_exists('sp_active')) {
       // Add sp_active activity data if available.
