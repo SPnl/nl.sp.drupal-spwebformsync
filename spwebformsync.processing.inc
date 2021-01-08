@@ -69,21 +69,21 @@ function spwebformsync_parse_submission($submission, $sync_data) {
   $data = array();
   $sync_items = spwebformsync_contact_data_fields();
   foreach ($sync_items as $key => $name) {
-    $var = '';
+    unset($var);
     if (!empty($sync_data[$key . '_component'])) {
       $component_id = $sync_data[$key . '_component'];
       $parts = explode('|', $component_id);
       if (isset($parts[1])) {
-        if (!empty($submission->data[$parts[0]][$parts[1]])) {
+        if (isset($submission->data[$parts[0]][$parts[1]]) && $submission->data[$parts[0]][$parts[1]] != '[no-data]') {
           $var = $submission->data[$parts[0]][$parts[1]];
         }
       }
       else {
-        if (!empty($submission->data[$component_id][0])) {
+        if (isset($submission->data[$component_id][0]) && $submission->data[$component_id][0] != '[no-data]') {
           $var = $submission->data[$component_id][0];
         }
       }
-      if (!empty($var)) {
+      if (isset($var)) {
         $data[$key] = $var;
       }
     }
