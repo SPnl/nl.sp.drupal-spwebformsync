@@ -853,6 +853,7 @@ function spwebformsync_settings_form($form, &$form_state) {
   $form['spwebformsync_sync_settings']['spwebformsync_cron_number'] = array(
     '#type' => 'select',
     '#title' => 'Hoeveel webformulier inzendingen moeten per keer gesynchroniseerd worden?',
+    '#description' => 'Sla op alvorens te syncen als je dit wijzigd.',
     '#default_value' => variable_get('spwebformsync_cron_number', 0),
     '#options' => range(0, 30, 1),
     '#states' => array(
