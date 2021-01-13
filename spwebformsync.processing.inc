@@ -447,11 +447,11 @@ function spwebformsync_push_contact_process_result($result, $submission, $sync_d
   if ($result) {
     spwebformsync_store_submission_sync_state($submission->nid, $submission->sid, 'synced');
     spwebformsync_send_mails($sync_data, $submission, $webform);
-    if ($result !== TRUE) {
-      watchdog('spwebformsync', 'Succesfully pushed submission (' . $submission->sid . ') to Procurios (' . $result . ').');
+    if ($result == 'insufficient_data') {
+      watchdog('spwebformsync', 'Insufficient data to push submission ' . $submission->sid . ' to Procurios.');
     }
     else {
-      watchdog('spwebformsync', 'Insufficient data to push submission ' . $submission->sid . ' to Procurios.');
+      watchdog('spwebformsync', 'Succesfully pushed submission (' . $submission->sid . ') to Procurios (' . $result . ').');
     }
   }
   else {
