@@ -129,7 +129,7 @@ function spwebformsync_admin_form($form, &$form_state, $form_id = NULL) {
             // Set default sync fields for spcontact component.
             $spcontact_questions = spcontact_text_questions();
             foreach ($spcontact_questions as $spcontact_key => $question) {
-              if ($data_key == $spcontact_key) {
+              if ($data_key == $spcontact_key || ($data_key == 'phone' && $spcontact_key == 'telephone')) {
                 $default_value = array_search('SP Contact: ' . $question, $webform_component_select_options);
                 if (!empty($default_value)) {
                   break;
