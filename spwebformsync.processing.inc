@@ -56,6 +56,16 @@ function spwebformsync_process_submission($submission) {
       }
     }
 
+    // Temporary filter out sumbission data without e-mail.
+    if (empty($data['email'])) {
+      $filter_submissions_without_email = variable_get('spwebformsync_filter_submissions_without_email');
+      if (!empty($filter_submissions_without_email)) {
+        spwebformsync_store_submission_sync_state($submission->nid, $submission->sid, 'no email');
+        watchdog('spwebformsync', 'Stopped processing submission nr. ' . $submission->sid . ', temporary filter out submissions without e-mail.');
+        return;
+      }
+    }
+
     // Sync submission to Procurios.
     $result = procpush_push_contact($data, $debug_info);
     spwebformsync_push_contact_process_result($result, $submission, $sync_data, $webform);
@@ -155,6 +165,7 @@ function spwebformsync_store_submission_sync_state($nid, $sid, $state) {
     'error' => '2',
     'insufficient data' => '3',
     'contact id not found' => '4',
+    'no email' => '5',
   );
   if (!empty($nid) && !empty($sid) && isset($states[$state])) {
     $new_state = $states[$state];
