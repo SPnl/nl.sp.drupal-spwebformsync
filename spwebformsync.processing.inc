@@ -359,8 +359,10 @@ function spwebformsync_send_mails($sync_data, $submission, $webform) {
         }
       }
       else {
-        if (!empty($submission->data[$component_id][0])) {
-          $mailto = $submission->data[$component_id][0];
+        if (!empty($submission->data[$component_id])) {
+          if (!empty($submission->data[$component_id][0])) {
+            $mailto = $submission->data[$component_id][0];
+          }
         }
       }
       if (!empty($mailto)) {
