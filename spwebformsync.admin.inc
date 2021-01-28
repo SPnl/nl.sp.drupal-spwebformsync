@@ -878,8 +878,15 @@ function spwebformsync_settings_form($form, &$form_state) {
   // Filter out submissions without e-mail.
   $form['spwebformsync_sync_settings']['spwebformsync_filter_submissions_without_email'] = array(
     '#type' => 'checkbox',
-    '#title' => 'Sync alleen inzendingen met e-mailadres',
+    '#title' => 'Alleen inzendingen met een e-mailadres doorsturen naar Procurios',
     '#default_value' => variable_get('spwebformsync_filter_submissions_without_email', 0),
+  );
+
+  // Filter out submissions without selection.
+  $form['spwebformsync_sync_settings']['spwebformsync_filter_submissions_without_selection'] = array(
+    '#type' => 'checkbox',
+    '#title' => 'Alleen inzendingen met een selectie doorsturen naar Procurios',
+    '#default_value' => variable_get('spwebformsync_filter_submissions_without_selection', 1),
   );
 
   $form['spwebformsync_sync_settings']['spwebformsync_sync_now'] = array(
