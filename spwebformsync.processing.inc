@@ -169,15 +169,7 @@ function spwebformsync_check_submission_confirmed($sid) {
  * Stores submission sync state.
  */
 function spwebformsync_store_submission_sync_state($nid, $sid, $state) {
-  $states = array(
-    'unprocessed' => '0',
-    'synced' => '1',
-    'error' => '2',
-    'insufficient data' => '3',
-    'contact id not found' => '4',
-    'no email' => '5',
-    'no selection' => '6',
-  );
+  $states = spwebformsync_get_states();
   if (!empty($nid) && !empty($sid) && isset($states[$state])) {
     $new_state = $states[$state];
     // Check if state exists.
@@ -266,6 +258,16 @@ function spwebformsync_sync() {
   if (!empty($sync_data)) {
     $number_of_webforms_to_sync = count($sync_data);
     $count = 0;
+    // Check max number of unprocessed submissions.
+    $states = spwebformsync_get_states();
+    $query = "SELECT COUNT(*) FROM {spwebformsync_syncstate} WHERE state = :state";
+    $result = db_query($query, array('state' => $states['processing']));
+    $unprocessed = $result->fetchField();
+    if ($unprocessed > $max_cron_number) {
+      watchdog('spwebformsync', 'Skipping sync, too much syncs in progress');
+      return $processed;
+    }
+    // Sync.
     while ($count < $max_cron_number && $items_found) {
       $items_found = FALSE;
       foreach ($sync_data as $webform_id => $data) {
@@ -275,6 +277,7 @@ function spwebformsync_sync() {
         }
         $submission = webform_get_submission($webform_id, $submission_id);
         if (!empty($submission)) {
+          spwebformsync_store_submission_sync_state($webform_id, $submission_id, 'processing');
           spwebformsync_process_submission($submission);
         }
         else {
@@ -576,4 +579,21 @@ function spwebformsync_get_cid_by_form_key($node, $form_key) {
       return $cid;
     }
   }
+}
+
+/**
+ * Return sync states.
+ */
+function spwebformsync_get_states() {
+  $states = array(
+    'unprocessed' => '0',
+    'synced' => '1',
+    'error' => '2',
+    'insufficient data' => '3',
+    'contact id not found' => '4',
+    'no email' => '5',
+    'no selection' => '6',
+    'processing' => '7',
+  );
+  return $states;
 }
