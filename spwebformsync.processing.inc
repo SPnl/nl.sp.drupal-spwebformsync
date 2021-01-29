@@ -263,8 +263,8 @@ function spwebformsync_sync() {
     $query = "SELECT COUNT(*) FROM {spwebformsync_syncstate} WHERE state = :state";
     $result = db_query($query, array('state' => $states['processing']));
     $unprocessed = $result->fetchField();
-    if ($unprocessed > $max_cron_number) {
-      watchdog('spwebformsync', 'Skipping sync, too much syncs in progress');
+    if ($unprocessed > 0) {
+      watchdog('spwebformsync', 'Skipping sync, previous syncs still in progress');
       return $processed;
     }
     // Sync.
