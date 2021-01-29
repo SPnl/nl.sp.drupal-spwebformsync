@@ -980,6 +980,39 @@ function spwebformsync_settings_form($form, &$form_state) {
       ),
     );
 
+    // Add previously omitted form submissions that had no seleciton assigned.
+    $filter_submissions_without_selection = variable_get('spwebformsync_filter_submissions_without_selection', 1);
+    if ($filter_submissions_without_selection) {
+      $form['spwebformsync_add_omitted_submissions'] = array(
+        '#type' => 'fieldset',
+        '#title' => 'Inzendingen toevoegen aan sync wachtrij die voorheen overgeslagen zijn',
+        '#description' => 'Voeg formulierinzendingen toe aan de synchronisatie wachtrij die zijn overgeslagen omdat er geen selectie aan was toegekend. Te gebruiken na het opnieuw instellen van de sync zodat er wel een selectie wordt toegekend aan alle inzendingen.',
+        '#prefix' => '<div id="spwebformsync_add_omitted_submissions">',
+        '#suffix' => '</div>',
+      );
+      $form['spwebformsync_add_omitted_submissions']['spwebformsync_add_omitted_submissions_select'] = array(
+        '#type' => 'select',
+        '#title' => 'Selecteer het webformulier',
+        '#options' => $webform_select_options,
+        '#empty_option' => '- Geen -',
+        '#name' => 'spwebformsync_add_omitted_submissions_select',
+      );
+      $form['spwebformsync_add_omitted_submissions']['spwebformsync_add_omitted_submissions_submit'] = array(
+        '#type' => 'button',
+        '#value' => 'Toevoegen',
+        '#name' => 'add_submissions_omitted_submit',
+        '#states' => array(
+          'visible' => array(
+            ':input[name="spwebformsync_add_omitted_submissions_select"]' => array('!value' => ''),
+          ),
+        ),
+        '#ajax' => array(
+          'wrapper' => 'spwebformsync_add_omitted_submissions',
+          'callback' => 'spwebformsync_form_add_omitted_submissions',
+        ),
+      );
+    }
+
     // Resync all form submissions.
     $form['spwebformsync_resync_submissions'] = array(
       '#type' => 'fieldset',
@@ -1067,6 +1100,21 @@ function spwebformsync_form_resync_submissions($form, &$form_state) {
     drupal_set_message('Er zijn '.$count.' inzendingen toegevoegd aan de wachtrij.');
   }
   return $form['spwebformsync_resync_submissions'];
+}
+
+function spwebformsync_form_add_omitted_submissions($form, &$form_state) {
+  $webform = $form_state['values']['spwebformsync_add_omitted_submissions_select'];
+  if (!empty($webform)) {
+    $count = db_update('spwebformsync_syncstate')
+      ->fields(array(
+        'state' => 0,
+      ))
+      ->condition('nid', $webform)
+      ->condition('state', 6)
+      ->execute();
+    drupal_set_message('Er zijn '.$count.' inzendingen toegevoegd aan de wachtrij.');
+  }
+  return $form['spwebformsync_add_omitted_submissions'];
 }
 
 function spwebformsync_group_autocomplete($string) {
