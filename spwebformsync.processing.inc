@@ -411,7 +411,7 @@ function spwebformsync_replace_tokens($submission, $webform, $raw_text) {
         foreach ($token_components as $token_component) {
           $items_parsed = array();
           if ($matches[1][$key] == $token_component['form_key']) {
-            $mapping = spwebformsync_parse_webform_select_options($webform, $token_component['cid']);
+            $mapping = spwebformsync_parse_webform_select_options($webform->nid, $token_component['cid']);
             if (!empty($submission->data[$token_component['cid']])) {
               $items = $submission->data[$token_component['cid']];
               foreach ($items as $item) {

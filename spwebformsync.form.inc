@@ -34,7 +34,16 @@ function spwebformsync_get_webforms() {
   return $webforms;
 }
 
-function spwebformsync_get_webform_allowed_components($nid, $allowed_types) {
+function spwebformsync_get_webform_allowed_components($nid, $allowed_types = NULL) {
+  // Set default allowed types.
+  if (empty($allowed_types)) {
+    $allowed_types = variable_get('spwebformsync_allowed_component_types', array());
+    // Always allow spcontact component.
+    if (module_exists('spcontact')) {
+      $allowed_types['spcontact'] = 'spcontact';
+    }
+  }
+  // Get components.
   if (!empty($nid)) {
     $webform = node_load($nid);
 
@@ -52,12 +61,16 @@ function spwebformsync_get_webform_allowed_components($nid, $allowed_types) {
   return FALSE;
 }
 
-function spwebformsync_get_civi_groups($sync = TRUE) {
+function spwebformsync_get_groups($sync = TRUE) {
   $selections = procapi_selection_get_select_list();
   return $selections;
 }
 
-function spwebformsync_parse_webform_select_options($webform, $selected_component) {
+function spwebformsync_parse_webform_select_options($webform_id, $selected_component) {
+  if (empty($webform_id)) {
+    return array();
+  }
+  $webform = node_load($webform_id);
   $options = array();
   switch($webform->webform['components'][$selected_component]['type']) {
     case 'select':
