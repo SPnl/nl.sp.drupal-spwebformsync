@@ -159,13 +159,17 @@ function spwebformsync_get_components_list($webform_components, $type = 'normal'
   return $list;
 }
 
-function spwebformsync_get_tokens_text($components) {
+function spwebformsync_get_tokens_text($webform_id) {
   $tokens_text = '';
-  $tokens = spwebformsync_get_component_tokens($components);
-  if (!empty($tokens)) {
-    $tokens_text .= 'Er zijn de volgende tokens beschikbaar die worden vervangen door de gebruiker ingevulde waarden: ';
-    $tokens_text .= join(' en ', array_filter(array_merge(array(join(', ', array_slice($tokens, 0, -1))), array_slice($tokens, -1)), 'strlen'));
-    $tokens_text .= '.';
+  if (!empty($webform_id)) {
+    $webform = node_load($webform_id);
+    $tokens_text = '';
+    $tokens = spwebformsync_get_component_tokens($webform->webform['components']);
+    if (!empty($tokens)) {
+      $tokens_text .= 'Er zijn de volgende tokens beschikbaar die worden vervangen door de gebruiker ingevulde waarden: ';
+      $tokens_text .= join(' en ', array_filter(array_merge(array(join(', ', array_slice($tokens, 0, -1))), array_slice($tokens, -1)), 'strlen'));
+      $tokens_text .= '.';
+    }
   }
   return $tokens_text;
 }
