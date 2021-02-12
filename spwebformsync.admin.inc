@@ -158,6 +158,8 @@ function spwebformsync_admin_form_validate($form, &$form_state) {
       unset($storage['selected_variable_groups'][$matches[1]]);
     }
 
+    // Mail.
+    /*
     $types = array(
       'variable',
     );
@@ -230,6 +232,7 @@ function spwebformsync_admin_form_validate($form, &$form_state) {
         return;
       }
     }
+    */
   }
 
   // Validate form.
@@ -318,6 +321,7 @@ function spwebformsync_admin_form_submit($form, &$form_state) {
     }
   }
   // Store selected variable mails.
+  /*
   $types = array(
     'variable',
   );
@@ -345,6 +349,7 @@ function spwebformsync_admin_form_submit($form, &$form_state) {
       }
     }
   }
+  */
   variable_set('spwebformsync_sync_data', $sync_data);
   drupal_set_message('SP webformulier synchronisatie is toegevoegd.');
 }
@@ -585,78 +590,6 @@ function spwebformsync_form_sync($form, &$form_state) {
   return $form['spwebformsync_sync_settings']['spwebformsync_sync_now'];
 }
 
-function spwebformsync_form_add_submissions($form, &$form_state) {
-  $webform = $form_state['values']['spwebformsync_add_submissions_select'];
-  $query = "SELECT wf.sid FROM {spwebformsync_syncstate} sp RIGHT JOIN {webform_submissions} wf ON sp.sid = wf.sid WHERE wf.nid = :webform AND id IS NULL AND submitted IS NOT NULL";
-  $result = db_query($query, array(':webform' => $webform));
-  if ($result) {
-    $count = 0;
-    while ($sid = $result->fetchField(0)) {
-      // Add submission to list.
-      $res = db_insert('spwebformsync_syncstate')
-        ->fields(array(
-          'sid' => $sid,
-          'nid' => $webform,
-          'state' => '0',
-        ))
-        ->execute();
-      if (!empty($res)) {
-        $count ++;
-      }
-    }
-    drupal_set_message('Er zijn '.$count.' inzendingen toegevoegd aan de wachtrij.');
-  }
-  return $form['spwebformsync_add_submissions'];
-}
-
-function spwebformsync_form_resync_submissions($form, &$form_state) {
-  $webform = $form_state['values']['spwebformsync_resync_submissions_select'];
-  if (!empty($webform)) {
-    $count = db_update('spwebformsync_syncstate')
-      ->fields(array(
-        'state' => 0,
-      ))
-      ->condition('nid', $webform)
-      ->condition('state', array(1,2), 'IN')
-      ->execute();
-    drupal_set_message('Er zijn '.$count.' inzendingen toegevoegd aan de wachtrij.');
-  }
-  return $form['spwebformsync_resync_submissions'];
-}
-
-function spwebformsync_form_add_omitted_submissions($form, &$form_state) {
-  $webform = $form_state['values']['spwebformsync_add_omitted_submissions_select'];
-  if (!empty($webform)) {
-    $count = db_update('spwebformsync_syncstate')
-      ->fields(array(
-        'state' => 0,
-      ))
-      ->condition('nid', $webform)
-      ->condition('state', 6)
-      ->execute();
-    drupal_set_message('Er zijn '.$count.' inzendingen toegevoegd aan de wachtrij.');
-  }
-  return $form['spwebformsync_add_omitted_submissions'];
-}
-
-function spwebformsync_group_autocomplete($string) {
-  $string = strtolower($string);
-  $matches = array();
-  if (strlen($string) > 2) {
-    $matches = array();
-    $groups = spwebformsync_get_groups();
-
-    foreach ($groups as $key => $group) {
-      if (strpos(strtolower($group), $string) !== FALSE) {
-        $matches[$group . ' (' . $key . ')'] = $group;
-      }
-      if (count($matches) > 10) break;
-    }
-  }
-
-  //Return the result to the form in json
-  drupal_json_output($matches);
-}
 
 function spwebformsync_overview() {
   $sync_data = variable_get('spwebformsync_sync_data', array());
@@ -725,20 +658,6 @@ function spwebformsync_overview() {
   }
 
   return $markup;
-}
-
-function spwebformsync_delete($id) {
-  $sync_data = variable_get('spwebformsync_sync_data', array());
-  $result = spwebformsync_delete_all_webform_submissions($id);
-  if (!empty($result)) {
-    drupal_set_message('Cron wachtrij webformulier synchronisatie nr. ' . $id . ' is verwijderd.');
-  }
-  if (isset($sync_data[$id])) {
-    unset($sync_data[$id]);
-    variable_set('spwebformsync_sync_data', $sync_data);
-    drupal_set_message('SP webformulier synchronisatie nr. ' . $id . ' is verwijderd.');
-  }
-  drupal_goto('/admin/config/sp/spwebformsync');
 }
 
 function spwebformsync_admin_form_store_defaults(&$storage) {
