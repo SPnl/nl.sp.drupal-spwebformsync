@@ -29,6 +29,7 @@ function spwebformsync_admin_form($form, &$form_state, $form_id = NULL) {
 
     // Check if webform has syncable components.
     $storage['webform_components'] = spwebformsync_get_webform_allowed_components($storage['webform_id']);
+    $storage['webform_components_list'] = webform_component_list($storage['webform_id'], $storage['webform_components'], FALSE);
     if (empty($storage['webform_components'])) {
       $form['no_components'] = array(
         '#markup' => '<p>Er zijn geen geschikte webformulier velden (meer) beschikbaar. (Zijn de gewenste veldtypes <a href="/admin/config/sp/spwebformsync/settings">geselecteerd</a>?)</p>',
@@ -50,6 +51,8 @@ function spwebformsync_admin_form($form, &$form_state, $form_id = NULL) {
     // Select group where contact should be added to dependend on form select option.
     spwebformsync_variable_group_select_form($form, $form_state);
 
+    // Select form option value that subscribes contact to SP news.
+    spwebformsync_variable_news_subscription_form($form, $form_state);
 
     // Always send e-mail.
     spwebformsync_fixed_mail_form($form, $form_state);
@@ -90,8 +93,8 @@ function spwebformsync_admin_form_validate($form, &$form_state) {
       case 'add_fixed_group':
         $groups = spwebformsync_get_groups();
         // Store selected group.
-        if (!empty($form_state['values']['fixed_group'])) {
-          $group_raw = $form_state['values']['fixed_group'];
+        if (!empty($values['fixed_group'])) {
+          $group_raw = $values['fixed_group'];
           $group = spwebformsync_parse_group_form_select_value($group_raw);
           if (!empty($group)) {
             $form_state['storage']['selected_fixed_groups'][$group] = $groups[$group];
@@ -103,11 +106,11 @@ function spwebformsync_admin_form_validate($form, &$form_state) {
         return;
 
       case 'add_webform_comp':
-        $webform_components = spwebformsync_get_webform_allowed_components($form_state['values']['webform'], array('select' => 'select', 'spcontact' => 'spcontact'));
+        $webform_components = spwebformsync_get_webform_allowed_components($values['webform'], array('select' => 'select', 'spcontact' => 'spcontact'));
         $webform_component_select_options = webform_component_list($webform_id, $webform_components, FALSE);
         // Store selected webform component.
-        if (!empty($form_state['values']['webform_comp'])) {
-          $component_id = $form_state['values']['webform_comp'];
+        if (!empty($values['webform_comp'])) {
+          $component_id = $values['webform_comp'];
           $storage['selected_variable_groups'][$component_id]['name'] = $webform_component_select_options[$component_id];
           // Empty group field.
           unset($form_state['input']['webform_comp']);
@@ -148,6 +151,11 @@ function spwebformsync_admin_form_validate($form, &$form_state) {
             drupal_set_message('Er is iets misgegaan met het verzenden van de e-mail.');
           }
         }
+        $form_state['rebuild'] = TRUE;
+        return;
+
+      case 'sp_news_subscription_component':
+        $storage['sp_news_subscription']['component_id'] = $values['sp_news_subscription_component'];
         $form_state['rebuild'] = TRUE;
         return;
     }
@@ -265,7 +273,6 @@ function spwebformsync_admin_form_submit($form, &$form_state) {
   $values = $form_state['values'];
   $storage = $form_state['storage'];
   $groups = spwebformsync_get_groups();
-  //$webform = node_load($form_state['values']['webform']);
   $sync_data = variable_get('spwebformsync_sync_data', array());
   // Store form values.
   $static_fields = array(
@@ -275,6 +282,8 @@ function spwebformsync_admin_form_submit($form, &$form_state) {
     'fixed_mail_subject',
     'fixed_mail_sender_emailadress',
     'overwrite',
+    'sp_news_subscription_component',
+    'sp_news_subscription_option',
   );
   foreach ($static_fields as $key) {
     if (isset($values[$key])) {
@@ -668,6 +677,14 @@ function spwebformsync_admin_form_store_defaults(&$storage) {
     if (!empty($sync_data[$webform_id]['selected_fixed_groups'])) {
       $storage['selected_fixed_groups'] = $sync_data[$webform_id]['selected_fixed_groups'];
     }
+    // Store subscription component.
+    if (!empty($sync_data[$webform_id]['sp_news_subscription_component'])) {
+      $storage['sp_news_subscription']['component_id'] = $sync_data[$webform_id]['sp_news_subscription_component'];
+    }
+    // Store subscription option.
+    if (!empty($sync_data[$webform_id]['sp_news_subscription_option'])) {
+      $storage['sp_news_subscription']['option_key'] = $sync_data[$webform_id]['sp_news_subscription_option'];
+    }
     // Store selected variable groups.
     if (!empty($sync_data[$webform_id]['selected_variable_groups'])) {
       foreach ($sync_data[$webform_id]['selected_variable_groups'] as $component_id => $data) {
@@ -986,6 +1003,44 @@ function spwebformsync_variable_group_select_form(&$form, $form_state) {
       '#markup' => '<p>Er zijn geen geschikte webformulier velden (meer) beschikbaar.</p>',
     );
   }
+}
+
+/**
+ * News subscription form.
+ */
+function spwebformsync_variable_news_subscription_form(&$form, $form_state) {
+  $storage = $form_state['storage'];
+  $webform_id = $storage['webform_id'];
+  $form['variable_news_subscription_select'] = array(
+    '#type' => 'fieldset',
+    '#title' => 'Meld contact afhankelijk van gemaakte keuze aan voor SP nieuws',
+    '#collapsible' => TRUE,
+    '#collapsed' => TRUE,
+  );
+  // Select component.
+  $webform_components_list = spwebformsync_get_components_list($storage['webform_components'], 'option_components_only');
+  $webform_components_list[6] = 'test';
+  $form['variable_news_subscription_select']['sp_news_subscription_component'] = array(
+    '#title' => 'Kies het SP nieuws aanmelden formulier element',
+    '#type' => 'select',
+    '#options' => $webform_components_list,
+    '#empty_option' => '- geen -',
+    '#default_value' => empty($storage['sp_news_subscription']['component_id']) ? '' : $storage['sp_news_subscription']['component_id'],
+    '#ajax' => array(
+      'wrapper' => 'spwebformsync_ajax_form',
+      'callback' => 'spwebformsync_ajax_form_callback',
+    ),
+  );
+  // Select option.
+  $form['variable_news_subscription_select']['#collapsed'] = FALSE;
+  $option_list = spwebformsync_parse_webform_select_options($webform_id, $storage['sp_news_subscription']['component_id']);
+  $form['variable_news_subscription_select']['sp_news_subscription_option'] = array(
+    '#title' => 'Kies de optie waarmee men zich aanmeld voor de nieuwsbrief',
+    '#type' => 'select',
+    '#empty_option' => '- geen -',
+    '#default_value' => $storage['sp_news_subscription']['option_key'],
+    '#options' => $option_list,
+  );
 }
 
 function spwebformsync_fixed_mail_form(&$form, $form_state) {

@@ -152,6 +152,9 @@ function spwebformsync_get_components_list($webform_components, $type = 'normal'
         break;
 
       default:
+        if ($type == 'option_components_only' && $component['type'] !== 'select') {
+          break;
+        }
         $list[$component_id] = substr($component['name'], 0, 40);
         break;
     }

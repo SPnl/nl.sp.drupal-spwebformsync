@@ -40,6 +40,12 @@ function spwebformsync_process_submission($submission) {
       $data['selections']['add'] = $groups;
     }
 
+    // Parse sp news.
+    $sp_news_subscription = spwebformsync_parse_sp_news_subscription($submission, $sync_data);
+    if ($sp_news_subscription) {
+      $data['sp_news_subscription'] = TRUE;
+    }
+
     if (module_exists('sp_active')) {
       // Add sp_active activity data if available.
       $sp_active = spwebformsync_parse_activities($webform, $submission);
@@ -137,6 +143,20 @@ function spwebformsync_parse_groups($submission, $sync_data) {
     }
   }
   return $groups;
+}
+
+/**
+ * Parse spnew submission data.
+ */
+function spwebformsync_parse_sp_news_subscription($submission, $sync_data) {
+  $submission_data = $submission->data;
+  // Get sp news group.
+  if (!empty($sync_data['sp_news_subscription_component']) && !empty($sync_data['sp_news_subscription_option'])) {
+    if (in_array($sync_data['sp_news_subscription_option'], $submission_data[$sync_data['sp_news_subscription_component']])) {
+      return TRUE;
+    }
+  }
+  return FALSE;
 }
 
 function _spcf_check_result($result, $dataname, $action, $data = NULL, $submission = NULL) {
