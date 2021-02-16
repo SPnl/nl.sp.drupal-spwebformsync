@@ -8,10 +8,12 @@ function spwebformsync_admin_form($form, &$form_state, $form_id = NULL) {
   $storage = &$form_state['storage'];
 
   $sync_data = variable_get('spwebformsync_sync_data', array());
-  if (empty($values) && !empty((int) $form_id)) {
-    $storage['webform_id'] = (int) $form_id;
-    // Store default values.
-    spwebformsync_admin_form_store_defaults($storage);
+  if (empty($storage['webform_id'])) {
+    if (!empty($form_id) || !empty($values['webform'])) {
+      $storage['webform_id'] = empty($form_id) ? $values['webform'] : $form_id;
+      // Store default values.
+      spwebformsync_admin_form_store_defaults($storage);
+    }
   }
   else {
     $storage['webform_id'] = isset($values['webform']) ? $values['webform'] : '';
