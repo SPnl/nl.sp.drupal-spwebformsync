@@ -966,8 +966,6 @@ function spwebformsync_variable_group_select_form(&$form, $form_state) {
   if (!empty($storage['selected_variable_groups'])) {
     $form['variable_group_select']['#collapsed'] = FALSE;
     foreach ($storage['selected_variable_groups'] as $component_key => $component_values) {
-      dpm($component_key);
-      dpm($component_values);
       // Remove already selected components from component list.
       unset($webform_components[$component_key]);
       $form['variable_group_select']['component_' . $component_key] = array(
