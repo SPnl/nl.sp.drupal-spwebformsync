@@ -317,10 +317,10 @@ function spwebformsync_admin_form_submit($form, &$form_state) {
       if (!empty($result)) {
         $component_id = $matches[1];
         $selected_value_id = $matches[2];
-        $component_options = spwebformsync_parse_webform_select_options($webform, $component_id);
+        $component_options = spwebformsync_parse_webform_select_options($storage['webform_id'], $component_id);
         $group = spwebformsync_parse_group_form_select_value($value);
         $sync_data[$values['webform']]['selected_variable_groups'][$component_id]['component_id'] = $component_id;
-        $sync_data[$values['webform']]['selected_variable_groups'][$component_id]['component_name'] = $webform->webform['components'][$component_id]['name'];
+        $sync_data[$values['webform']]['selected_variable_groups'][$component_id]['component_name'] = $storage['webform_components'][$component_id]['name'];
         $sync_data[$values['webform']]['selected_variable_groups'][$component_id]['values'][$selected_value_id] = array(
           'value_id' => $selected_value_id,
           'value_name' => $component_options[$selected_value_id],
@@ -619,7 +619,7 @@ function spwebformsync_overview() {
   // Show syncs.
   if (!empty($sync_data)) {
     $data_names = spwebformsync_contact_data_fields();
-    $markup .= '<table><tr><th>Webformulier</th><th>Webformulier &#8594; Civicrm</th><th>Vaste selecties</th><th>Keuze-afhankelijke selecties</th><th>Cron wachtrij</th><th></th></tr>';
+    $markup .= '<table><tr><th>Webformulier</th><th>Webformulier &#8594; Civicrm</th><th>Vaste selecties</th><th>Keuze-afhankelijke selecties</th><th>Nieuwsbrief aanmelding</th><th>Cron wachtrij</th><th></th></tr>';
     foreach ($sync_data as $data) {
       $form = node_load($data['webform']);
       if (!empty($form)) {
@@ -655,7 +655,16 @@ function spwebformsync_overview() {
           }
         }
         else {
-          $markup .= 'Geen';
+          $markup .= 'Geen variabele selecties';
+        }
+        $markup .= '</td><td>';
+        if (!empty($data['sp_news_subscription_component']) && !empty($data['sp_news_subscription_option'])) {
+          $option_list = spwebformsync_parse_webform_select_options($data['webform'], $data['sp_news_subscription_component']);
+          $markup .= '<p>'.$component_data['component_name'].'<br/><table><tr><td>'.$option_list[$data['sp_news_subscription_option']].'</td><td>&nbsp;&#8594;&nbsp;</td><td>SP Nieuwsbrief</td></tr>';
+          $markup .= '</table></p>';
+        }
+        else {
+          $markup .= 'Geen nieuwsbrief aanmelding';
         }
         $markup .= '</td><td>' . $postphoned_number . '</td>';
         $markup .= '<td><a href="/admin/config/sp/spwebformsync/configure/' . $form->nid . '">bewerk</a> <a href="/admin/config/sp/spwebformsync/delete/' . $form->nid . '">verwijder</a></td></tr>';
@@ -957,11 +966,13 @@ function spwebformsync_variable_group_select_form(&$form, $form_state) {
   if (!empty($storage['selected_variable_groups'])) {
     $form['variable_group_select']['#collapsed'] = FALSE;
     foreach ($storage['selected_variable_groups'] as $component_key => $component_values) {
+      dpm($component_key);
+      dpm($component_values);
       // Remove already selected components from component list.
       unset($webform_components[$component_key]);
       $form['variable_group_select']['component_' . $component_key] = array(
         '#type' => 'fieldset',
-        '#title' => 'Webform veld: ' . $component_values['name'],
+        '#title' => 'Webform veld: ' . $component_values['component_name'],
       );
       // Get webform_component options.
       $component_options = spwebformsync_parse_webform_select_options($webform_id, $component_key);
