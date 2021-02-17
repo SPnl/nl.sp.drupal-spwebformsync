@@ -30,8 +30,6 @@ function spwebformsync_admin_form($form, &$form_state, $form_id = NULL) {
   if (!empty($storage['webform_id'])) {
 
     // Check if webform has syncable components.
-    $storage['webform_components'] = spwebformsync_get_webform_allowed_components($storage['webform_id']);
-    $storage['webform_components_list'] = webform_component_list($storage['webform_id'], $storage['webform_components'], FALSE);
     if (empty($storage['webform_components'])) {
       $form['no_components'] = array(
         '#markup' => '<p>Er zijn geen geschikte webformulier velden (meer) beschikbaar. (Zijn de gewenste veldtypes <a href="/admin/config/sp/spwebformsync/settings">geselecteerd</a>?)</p>',
@@ -674,18 +672,30 @@ function spwebformsync_overview() {
 function spwebformsync_admin_form_store_defaults(&$storage) {
   if (!empty($storage['webform_id'])) {
     $webform_id = $storage['webform_id'];
+    $storage['webform_components'] = spwebformsync_get_webform_allowed_components($storage['webform_id']);
+    $storage['webform_components_list'] = webform_component_list($storage['webform_id'], $storage['webform_components'], FALSE);
     $sync_data = variable_get('spwebformsync_sync_data', array());
     // Store selected fixed groups.
     if (!empty($sync_data[$webform_id]['selected_fixed_groups'])) {
       $storage['selected_fixed_groups'] = $sync_data[$webform_id]['selected_fixed_groups'];
     }
     // Store subscription component.
-    if (!empty($sync_data[$webform_id]['sp_news_subscription_component'])) {
-      $storage['sp_news_subscription']['component_id'] = $sync_data[$webform_id]['sp_news_subscription_component'];
+    if (empty($sync_data[$webform_id]['sp_news_subscription_component'])) {
+      // Check if spcontact component is available.
+      foreach ($storage['webform_components'] AS $component) {
+        if ($component['type'] == 'spcontact') {
+          $storage['sp_news_subscription']['component_id'] = $component['cid'];
+          $storage['sp_news_subscription']['option_key'] = 'sp_news';
+          break;
+        }
+      }
     }
-    // Store subscription option.
-    if (!empty($sync_data[$webform_id]['sp_news_subscription_option'])) {
-      $storage['sp_news_subscription']['option_key'] = $sync_data[$webform_id]['sp_news_subscription_option'];
+    else {
+      $storage['sp_news_subscription']['component_id'] = $sync_data[$webform_id]['sp_news_subscription_component'];
+      // Store subscription option.
+      if (!empty($sync_data[$webform_id]['sp_news_subscription_option'])) {
+        $storage['sp_news_subscription']['option_key'] = $sync_data[$webform_id]['sp_news_subscription_option'];
+      }
     }
     // Store selected variable groups.
     if (!empty($sync_data[$webform_id]['selected_variable_groups'])) {
