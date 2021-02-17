@@ -273,7 +273,8 @@ function spwebformsync_admin_form_submit($form, &$form_state) {
   $values = $form_state['values'];
   $storage = $form_state['storage'];
   $groups = spwebformsync_get_groups();
-  $sync_data = array();
+  $sync_data = variable_get('spwebformsync_sync_data');
+  $sync_data[$storage['webform_id']] = array();
   // Store form values.
   $static_fields = array(
     'webform',
