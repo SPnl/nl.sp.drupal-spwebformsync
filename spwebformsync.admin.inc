@@ -792,8 +792,8 @@ function spwebformsync_select_webform_form(&$form, $form_state) {
  * Defines field mapping form.
  */
 function spwebformsync_field_mapping_form(&$form, $form_state) {
-  $values = $form_state['values'];
-  $storage = $form_state['storage'];
+  $values = empty($form_state['values']) ? array() : $form_state['values'];
+  $storage = empty($form_state['storage']) ? array() : $form_state['storage'];
 
   $data_names = spwebformsync_contact_data_fields();
   $webform_id = $storage['webform_id'];
