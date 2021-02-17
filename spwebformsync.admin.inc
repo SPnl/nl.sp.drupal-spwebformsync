@@ -1041,7 +1041,6 @@ function spwebformsync_variable_news_subscription_form(&$form, $form_state) {
   );
   // Select component.
   $webform_components_list = spwebformsync_get_components_list($storage['webform_components'], 'option_components_only');
-  $webform_components_list[6] = 'test';
   $form['variable_news_subscription_select']['sp_news_subscription_component'] = array(
     '#title' => 'Kies het SP nieuws aanmelden formulier element',
     '#type' => 'select',
