@@ -129,7 +129,7 @@ function spwebformsync_permission() {
   return array(
     'administer sp webformsync' => array(
       'title' => 'Beheer SP webformsync',
-      'description' => 'Stel in welke data uit webformulierinzendingen automatisch door te sturen naar CiviCRM.',
+      'description' => 'Stel in welke data uit webformulierinzendingen automatisch door te sturen naar CRM.',
     ),
   );
 }
@@ -219,10 +219,10 @@ function spwebformsync_unprocessed_count($nid) {
 function spwebformsync_mail($key, &$message, $params) {
   switch ($key) {
   case 'check_address':
-    $message['subject'] = 'Handmatig controleren adres CiviCRM contact';
+    $message['subject'] = 'Handmatig controleren adres CRM contact';
     $message['body'][] = 'Beste,';
-    $message['body'][] = 'het volgende contact is via een webformulier synchronizatie toegevoegd in CiviCRM. Het adres van dit contact moet helaas handmatig worden gecontroleerd. Komt dit te vaak voor, of onnodig, laat het dan aan het webteam weten.';
-    $message['body'][] = 'CiviCRM contact id: ' . $params['contact_id'];
+    $message['body'][] = 'het volgende contact is via een webformulier synchronizatie toegevoegd in CRM. Het adres van dit contact moet helaas handmatig worden gecontroleerd. Komt dit te vaak voor, of onnodig, laat het dan aan het webteam weten.';
+    $message['body'][] = 'CRM contact id: ' . $params['contact_id'];
     $message['body'][] = 'Te controleren adres: "' . $params['street_and_number'] . '"';
     $message['body'][] = 'Thx, het webteam';
     $message['body'][] = '(Dit is een automatisch gegenereerd bericht).';

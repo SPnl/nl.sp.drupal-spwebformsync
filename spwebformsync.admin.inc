@@ -303,7 +303,7 @@ function spwebformsync_admin_form_submit($form, &$form_state) {
       unset($sync_data[$storage['webform_id']][$key]);
     }
   }
-  // Store selected components to sync with CiviCRM contact data.
+  // Store selected components to sync with CRM contact data.
   foreach ($values as $key => $value) {
     if (preg_match('/^[a-z_]+_component$/', $key)) {
       $sync_data[$storage['webform_id']][$key] = $value;
@@ -619,7 +619,7 @@ function spwebformsync_overview() {
   // Show syncs.
   if (!empty($sync_data)) {
     $data_names = spwebformsync_contact_data_fields();
-    $markup .= '<table><tr><th>Webformulier</th><th>Webformulier &#8594; Civicrm</th><th>Vaste selecties</th><th>Keuze-afhankelijke selecties</th><th>Nieuwsbrief aanmelding</th><th>Cron wachtrij</th><th></th></tr>';
+    $markup .= '<table><tr><th>Webformulier</th><th>Webformulier &#8594; CRM</th><th>Vaste selecties</th><th>Keuze-afhankelijke selecties</th><th>Nieuwsbrief aanmelding</th><th>Cron wachtrij</th><th></th></tr>';
     foreach ($sync_data as $data) {
       $form = node_load($data['webform']);
       if (!empty($form)) {
@@ -802,7 +802,7 @@ function spwebformsync_field_mapping_form(&$form, $form_state) {
   // Add select field components.
   $form['fields'] = array(
     '#type' => 'fieldset',
-    '#title' => 'Selecteer naar het CiviCRM contact te synchronizeren webformulier velden (optioneel)',
+    '#title' => 'Selecteer naar het CRM contact te synchronizeren webformulier velden (optioneel)',
   );
 
   foreach ($data_names as $data_key => $data_name) {
@@ -887,9 +887,9 @@ function spwebformsync_field_mapping_form(&$form, $form_state) {
 
   $form['fields']['overwrite'] = array(
     '#type' => 'checkboxes',
-    '#title' => 'Overschrijf bestaande waarden in CiviCRM voor leden',
+    '#title' => 'Overschrijf bestaande waarden in CRM voor leden',
     '#default_value' => empty($values['overwrite']) ? $storage['overwrite'] : $values['overwrite'],
-    '#options' => array('overwrite' => 'Overschrijf bestaande CiviCRM waarden voor leden'),
+    '#options' => array('overwrite' => 'Overschrijf bestaande CRM waarden voor leden'),
   );
 }
 

@@ -165,11 +165,11 @@ function _spcf_check_result($result, $dataname, $action, $data = NULL, $submissi
   if (!isset($result['is_error']) || $result['is_error'] == 1) {
     if (empty($submission)) {
       drupal_set_message('Fout bij het ' . $action_name . ' van ' . $dataname . '.', 'error');
-      watchdog('spcivisync', '<p>Fout bij het ' . $action_name . ' van ' . $dataname . '.<pre>' . print_r($result, TRUE) . '</pre>Parameters:<pre>' . print_r($data, TRUE) . '</pre>', array(), WATCHDOG_ERROR);
+      watchdog('spwebformsync', '<p>Fout bij het ' . $action_name . ' van ' . $dataname . '.<pre>' . print_r($result, TRUE) . '</pre>Parameters:<pre>' . print_r($data, TRUE) . '</pre>', array(), WATCHDOG_ERROR);
     }
     else {
-      drupal_set_message('Fout bij het ' . $action_name . ' van ' . $dataname . ' ' . $place_name . ' CiviCRM (sid = ' . $submission->sid . ').', 'error');
-      watchdog('spcivisync', '<p>Fout bij het ' . $action_name . ' van ' . $dataname . ' ' . $place_name . ' CiviCRM (sid = ' . $submission->sid . ').</p>Resultaat:<pre>' . print_r($result, TRUE) . '</pre>Parameters:<pre>' . print_r($data, TRUE) . '</pre>', array(), WATCHDOG_ERROR);
+      drupal_set_message('Fout bij het ' . $action_name . ' van ' . $dataname . ' ' . $place_name . ' CRM (sid = ' . $submission->sid . ').', 'error');
+      watchdog('spwebformsync', '<p>Fout bij het ' . $action_name . ' van ' . $dataname . ' ' . $place_name . ' CRM (sid = ' . $submission->sid . ').</p>Resultaat:<pre>' . print_r($result, TRUE) . '</pre>Parameters:<pre>' . print_r($data, TRUE) . '</pre>', array(), WATCHDOG_ERROR);
     }
     spwebformsync_store_submission_sync_state($submission->nid, $submission->sid, 'error');
     return FALSE;
