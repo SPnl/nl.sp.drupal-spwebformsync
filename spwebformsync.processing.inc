@@ -72,6 +72,23 @@ function spwebformsync_process_submission($submission) {
       }
     }
 
+    // Filter out submissions from beltool that are not status answered_completed.
+    if (module_exists('spbellen')) {
+      if (!empty($submission)) {
+        if (spbellen_is_spbellen_form($submission->nid)) {
+          // Get action.
+          $sql = "SELECT result FROM {spbellen_action} WHERE webform_submission_id = :sid";
+          $result = db_query($sql, array(':sid' => $submission->sid));
+          $status = $result->fetchField();
+          if ($status !== 'answered_completed') {
+            spwebformsync_store_submission_sync_state($submission->nid, $submission->sid, 'no selection');
+            watchdog('spwebformsync', 'Stopped processing submission nr. ' . $submission->sid . ', filter out submissions without selection.');
+            return;
+          }
+        }
+      }
+    }
+
     // Filter out sumbission data without e-mail.
     if (empty($data['selections'])) {
       $filter_submissions_without_selection = variable_get('spwebformsync_filter_submissions_without_selection');
@@ -614,6 +631,7 @@ function spwebformsync_get_states() {
     'no email' => '5',
     'no selection' => '6',
     'processing' => '7',
+    'beltool not answered completed' => '8',
   );
   return $states;
 }
