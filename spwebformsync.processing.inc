@@ -81,8 +81,8 @@ function spwebformsync_process_submission($submission) {
           $result = db_query($sql, array(':sid' => $submission->sid));
           $status = $result->fetchField();
           if ($status !== 'answered_completed') {
-            spwebformsync_store_submission_sync_state($submission->nid, $submission->sid, 'no selection');
-            watchdog('spwebformsync', 'Stopped processing submission nr. ' . $submission->sid . ', filter out submissions without selection.');
+            spwebformsync_store_submission_sync_state($submission->nid, $submission->sid, 'beltool not answered completed');
+            watchdog('spwebformsync', 'Stopped processing submission nr. ' . $submission->sid . ', filter out beltool submission unfinished call (' . $status . ')');
             return;
           }
         }
