@@ -255,23 +255,29 @@ function spwebformsync_store_submission_sync_state($nid, $sid, $state) {
 
 function spwebformsync_get_unprocessed_submission_id($nid) {
   if (!empty($nid)) {
-    $do_not_check_confirmation = variable_get('spwebformsync_do_not_check_confirmation', 0);
+    $check_confirmation = FALSE;
+    $sync_data = variable_get('spwebformsync_sync_data', array());
+    if (!empty($sync_data[$nid]['confirmation_check'])) {
+      if (!empty($sync_data[$nid]['confirmation_check']['confirmation_check'])) {
+        $check_confirmation = TRUE;
+      }
+    }
 
     // Create query.
     $query = db_select('spwebformsync_syncstate', 'state');
-    if ($do_not_check_confirmation) {
+    if ($check_confirmation) {
+      $query->join('webform_submissions', 'sub', 'state.sid = sub.sid');
       $result = $query
         ->fields('state', array('sid'))
+        ->condition('sub.confirmed', 1)
         ->condition('state.state', 0)
         ->condition('state.nid', $nid)
         ->range(0,1)
         ->execute();
     }
     else {
-      $query->join('webform_submissions', 'sub', 'state.sid = sub.sid');
       $result = $query
         ->fields('state', array('sid'))
-        ->condition('sub.confirmed', 1)
         ->condition('state.state', 0)
         ->condition('state.nid', $nid)
         ->range(0,1)

@@ -283,6 +283,7 @@ function spwebformsync_admin_form_submit($form, &$form_state) {
     'fixed_mail_subject',
     'fixed_mail_sender_emailadress',
     'overwrite',
+    'confirmation_check',
     'sp_news_subscription_component',
     'sp_news_subscription_option',
   );
@@ -393,18 +394,6 @@ function spwebformsync_settings_form($form, &$form_state) {
     '#description' => 'Sla op alvorens te syncen als je dit wijzigd.',
     '#default_value' => variable_get('spwebformsync_cron_number', 0),
     '#options' => range(0, 30, 1),
-    '#states' => array(
-      'invisible' => array(
-        ':input[name="spwebformsync_sync_type"]' => array('value' => 'direct'),
-      ),
-    ),
-  );
-
-  // Check confirmation.
-  $form['spwebformsync_sync_settings']['spwebformsync_do_not_check_confirmation'] = array(
-    '#type' => 'checkbox',
-    '#title' => 'Sla de bevestiginscontrole voor inzendingen over',
-    '#default_value' => variable_get('spwebformsync_do_not_check_confirmation', 0),
     '#states' => array(
       'invisible' => array(
         ':input[name="spwebformsync_sync_type"]' => array('value' => 'direct'),
@@ -745,6 +734,16 @@ function spwebformsync_admin_form_store_defaults(&$storage) {
       // Beltool form, set overwrite by default.
       $storage['overwrite'] = array('overwrite');
     }
+    // Store confirmation check.
+    $storage['confirmation_check'] = array();
+    if (isset($sync_data[$webform_id]['confirmation_check']['confirmation_check'])) {
+      if (empty($sync_data[$webform_id]['confirmation_check']['confirmation_check'])) {
+        $storage['confirmation_check'] = array();
+      }
+      else {
+        $storage['confirmation_check'] = array('confirmation_check' => 'confirmation_check');
+      }
+    }
   }
 }
 
@@ -887,9 +886,23 @@ function spwebformsync_field_mapping_form(&$form, $form_state) {
 
   $form['fields']['overwrite'] = array(
     '#type' => 'checkboxes',
-    '#title' => 'Overschrijf bestaande waarden in CRM voor leden',
     '#default_value' => empty($values['overwrite']) ? $storage['overwrite'] : $values['overwrite'],
     '#options' => array('overwrite' => 'Overschrijf bestaande CRM waarden voor leden'),
+  );
+
+  if (isset($values['confirmation_check'])) {
+    $default = $values['confirmation_check'];
+  }
+  elseif (isset($storage['confirmation_check'])) {
+    $default = $storage['confirmation_check'];
+  }
+  else {
+    $default = array('confirmation_check' => 'confirmation_check');
+  }
+  $form['fields']['confirmation_check'] = array(
+    '#type' => 'checkboxes',
+    '#default_value' => $default,
+    '#options' => array('confirmation_check' => 'Alleen bevestigde inzendingen syncen'),
   );
 }
 
@@ -1059,7 +1072,7 @@ function spwebformsync_variable_news_subscription_form(&$form, $form_state) {
     '#title' => 'Kies de optie waarmee men zich aanmeld voor de nieuwsbrief',
     '#type' => 'select',
     '#empty_option' => '- geen -',
-    '#default_value' => $storage['sp_news_subscription']['option_key'],
+    '#default_value' => empty($storage['sp_news_subscription']['option_key']) ? NULL : $storage['sp_news_subscription']['option_key'],
     '#options' => $option_list,
   );
 }
