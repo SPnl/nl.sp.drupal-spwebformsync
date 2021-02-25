@@ -62,6 +62,14 @@ function spwebformsync_process_submission($submission) {
       }
     }
 
+    if (module_exists('sp_privacy')) {
+      // Add privacy data if available.
+      $sp_privacy = spwebformsync_parse_privacy($webform, $submission);
+      if (!empty($sp_privacy)) {
+        $data['privacy'] = $sp_privacy;
+      }
+    }
+
     // Temporary filter out sumbission data without e-mail.
     if (empty($data['email'])) {
       $filter_submissions_without_email = variable_get('spwebformsync_filter_submissions_without_email');
@@ -577,8 +585,8 @@ function spwebformsync_parse_work_and_interests($webform, $submission) {
             $data_to_parse = $submission->data[$key];
             $no = 0;
             foreach ($option_groups as $option_group) {
+              $value = $data_to_parse[$no];
               if ($option_group['type'] == 'radios') {
-                $value = $data_to_parse[$no];
                 if (!empty($value)) {
                   $parsed_data[$option_group['key']] = $value;
                 }
@@ -586,7 +594,6 @@ function spwebformsync_parse_work_and_interests($webform, $submission) {
               }
               else {
                 foreach ($option_group['options'] as $option) {
-                  $value = $data_to_parse[$no];
                   if (!empty($value)) {
                     $parsed_data[$option_group['key']][$value] = $value;
                   }
@@ -594,6 +601,30 @@ function spwebformsync_parse_work_and_interests($webform, $submission) {
                 }
               }
             }
+          }
+        }
+      }
+    }
+  }
+  return $parsed_data;
+}
+
+/**
+ * Parses privacy data from submission for sending to spcivipush module.
+ */
+function spwebformsync_parse_privacy($webform, $submission) {
+  $parsed_data = array();
+  if (isset($submission->data)) {
+    if (!empty($webform->webform['components'])) {
+      foreach ($webform->webform['components'] as $key => $component) {
+        if (!empty($component['type'] && $component['type'] === 'sp_privacy')) {
+          if (!empty($submission->data[$key])) {
+            $data_to_parse = $submission->data[$key];
+            $parsed_data = array();
+            foreach ($data_to_parse as $key => $value) {
+              $parsed_data[$key] = empty($value) ? FALSE : TRUE;
+            }
+            break;
           }
         }
       }
