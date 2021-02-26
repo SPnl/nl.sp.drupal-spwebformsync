@@ -256,12 +256,19 @@ function spwebformsync_admin_form_validate($form, &$form_state) {
     (
       (
         empty($values['postal_code_component']) ||
-        empty($values['house_number_component'])
+        (
+          empty($values['house_number_component']) &&
+          empty($values['house_number_and_addition_component'])
+
+        )
       ) &&
       (
         empty($values['street_component']) ||
-        empty($values['house_number_component']) ||
-        empty($values['locality_component'])
+        empty($values['locality_component']) ||
+        (
+          empty($values['house_number_component']) &&
+          empty($values['house_number_and_addition_component'])
+        )
       )
     )
   ) {
