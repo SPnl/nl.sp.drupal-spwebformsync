@@ -156,20 +156,6 @@ function spwebformsync_node_delete($node) {
 }
 
 /**
- * Implements hook_webform_submission_insert().
- */
-function spwebformsync_webform_submission_presave($node, &$submission) {
-  // Set secret field value.
-  $cid = spwebformsync_get_cid_by_form_key($node, 'sp_unsubscribe_link_secret');
-  if (!empty($cid)) {
-    if (empty($submission->data[$cid][0])) {
-      $random_key = drupal_random_key(24);
-      $submission->data[$cid][0] = $random_key;
-    }
-  }
-}
-
-/**
  *  Implements hook_webform_submission_insert.
  */
 function spwebformsync_webform_submission_insert($node, $submission) {
@@ -244,9 +230,6 @@ function spwebformsync_form_alter(&$form, &$form_state, $form_id) {
       $form['#validate'][] = 'spwebformsync_options_key_validate';
     }
   }
-  if ($form_id === 'webform_email_edit_form') {
-    $form['template']['#description'] .= '<p>Gebruik het token: [unsubscribe_link] in de e-mail tekst om een afmeldlink toe te voegen.</p>';
-  }
 }
 
 function spwebformsync_options_key_validate($form, &$form_state) {
@@ -263,128 +246,6 @@ function spwebformsync_options_key_validate($form, &$form_state) {
       }
     }
   }
-}
-
-/**
- * Add default webformsync hidden components to webform.
- */
-function spwebformsync_node_presave($node) {
-  // Check if webform.
-  if (!empty($node->webform)) {
-    if (!empty($node->webform['components'])) {
-      $default_components = array(
-        array(
-          'form_key' => 'source_url',
-          'title' => 'Source url',
-          'found' => FALSE,
-        ),
-        array(
-          'form_key' => 'sp_unsubscribe_link_secret',
-          'title' => 'SP unsubscribe link secret',
-          'found' => FALSE,
-        ),
-      );
-      foreach ($default_components as $default_component_key => $default_component) {
-        // Check if unsubscribe_secret hidden component already exists.
-        $cid = spwebformsync_get_cid_by_form_key($node, $default_component['form_key']);
-        if (empty($cid)) {
-          // Add new component.
-          $component = array(
-            'name' => $default_component['title'],
-            'form_key' => $default_component['form_key'],
-            'type' => 'hidden',
-            'mandatory' => 0,
-            'weight' => 9,
-            'pid' => 0,
-            'extra' => array(
-              'hidden_type' => 'value',
-              'private' => 0,
-            ),
-          );
-          switch ($default_component['form_key']) {
-            case 'sp_unsubscribe_link_secret':
-              $component['value'] = '';
-              break;
-
-            case 'source_url':
-              $component['value'] = '[current-page:url]';
-              break;
-          }
-          $node->webform['components'][] = $component;
-        }
-      }
-    }
-  }
-}
-
-/**
- * Add unsubscribe link to mimemail variables.
- */
-function spwebformsync_preprocess_mimemail_message(&$variables) {
-  // Check if webform submission message.
-  if (!empty($variables['message']['params']['submission'])) {
-    $submission = $variables['message']['params']['submission'];
-    // Get unsubscribe link.
-    $unsubscribe_link = spwebformsync_get_unsubscribe_link($submission);
-    if ($unsubscribe_link) {
-      // Replace token in body.
-      $variables['body'] = str_replace('[unsubscribe_link]', $unsubscribe_link, $variables['body']);
-      // Add unsubscribe link variable.
-      if (valid_url($unsubscribe_link, TRUE)) {
-        $variables['unsubscribe_link'] = $unsubscribe_link;
-      }
-      // Add domain variable.
-      $domain = spwebformsync_get_domain();
-      $variables['domain'] = $domain;
-    }
-  }
-}
-
-/**
- * Creates an url applicable string that contains encrypted data.
- */
-function spwebformsync_encrypt(array $data) {
-  $data = serialize($data);
-  $key = variable_get('spwebformsync_datadrop_secret_unsubscribe', 'paijeich6zoh4Mah');
-  $encrypted = openssl_encrypt($data, 'AES-256-CBC', $key, 0, 'Quie9ophei2iKah1');
-  $hash = urlencode(base64_encode($encrypted));
-  return $hash;
-}
-
-/**
- * Get unsubscribe link.
- */
-function spwebformsync_get_unsubscribe_link($submission) {
-  $unsubscribe_link = FALSE;
-  $node = node_load($submission->nid);
-  // Get hash.
-  $cid = spwebformsync_get_cid_by_form_key($node, 'sp_unsubscribe_link_secret');
-  if (!empty($cid)) {
-    $secret = $submission->data[$cid][0];
-    // Create unsubscribe link.
-    $data = array(
-      'title' => $node->title,
-      'secret' => $secret,
-    );
-    $hash = spwebformsync_encrypt($data);
-    // Add link variable.
-    //$datadrop_server = variable_get('spwebformsync_datadrop_server', '');
-    $datadrop_server = 'https://uitschrijven.sp.nl';
-    if (!empty($datadrop_server)) {
-      $unsubscribe_link = $datadrop_server . '/afmelden/' . $hash;
-    }
-  }
-  return $unsubscribe_link;
-}
-
-/**
- * Get site domain.
- */
-function spwebformsync_get_domain() {
-  // Add domain variable.
-  global $base_url;
-  $domain = preg_replace('(^https?://)', '', $base_url);
-  return $domain;
 }
 
 function spwebformsync_filter_token_components($components) {
