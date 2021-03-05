@@ -418,7 +418,7 @@ function spwebformsync_settings_form($form, &$form_state) {
   // Filter out submissions without selection.
   $form['spwebformsync_sync_settings']['spwebformsync_filter_submissions_without_selection'] = array(
     '#type' => 'checkbox',
-    '#title' => 'Alleen inzendingen met een selectie doorsturen naar Procurios',
+    '#title' => 'Alleen inzendingen met een selectie of nieuwsaanmelding doorsturen naar Procurios',
     '#default_value' => variable_get('spwebformsync_filter_submissions_without_selection', 1),
   );
 
