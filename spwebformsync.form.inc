@@ -22,16 +22,18 @@ function spwebformsync_get_webforms() {
       $webforms = entity_load('node', $nids);
     }
   }
-  /*
-  // Filter already set forms.
-  $sync_data = variable_get('spwebformsync_sync_data', array());
-  foreach ($webforms as $key => $webform) {
-    if (in_array($webform->nid, array_keys($sync_data))) {
-      unset($webforms[$key]);
+  return $webforms;
+}
+
+function spwebformsync_get_webforms_list() {
+  $webforms_list = &drupal_static(__FUNCTION__);
+  if (!isset($webforms_list)) {
+    $webforms = spwebformsync_get_webforms();
+    foreach ($webforms as $webform) {
+      $webforms_list[$webform->nid] = $webform->title;
     }
   }
-  */
-  return $webforms;
+  return $webforms_list;
 }
 
 function spwebformsync_get_webform_allowed_components($nid, $allowed_types = NULL) {
@@ -102,13 +104,13 @@ function spwebformsync_parse_webform_select_options($webform_id, $selected_compo
   return $options;
 }
 
-function spwebformsync_parse_group_form_select_value($group_raw) {
-  $group = '';
-  preg_match('@^.+\(([0-9]+)\)$@', $group_raw, $matches);
+function spwebformsync_parse_id($value_raw) {
+  $id = '';
+  preg_match('@^.+\(([0-9]+)\)$@', $value_raw, $matches);
   if (!empty($matches[1])) {
-    $group = $matches[1];
+    $id = $matches[1];
   }
-  return $group;
+  return $id;
 }
 
 function spwebformsync_get_components_list($webform_components, $type = 'normal') {
@@ -231,6 +233,9 @@ function spwebformsync_form_add_omitted_submissions($form, &$form_state) {
   return $form['spwebformsync_add_omitted_submissions'];
 }
 
+/**
+ * Autocomplete for group search form elements.
+ */
 function spwebformsync_group_autocomplete($string) {
   $string = strtolower($string);
   $matches = array();
@@ -242,11 +247,37 @@ function spwebformsync_group_autocomplete($string) {
       if (strpos(strtolower($group), $string) !== FALSE) {
         $matches[$group . ' (' . $key . ')'] = $group;
       }
-      if (count($matches) > 10) break;
+      if (count($matches) > 10) {
+        break;
+      }
     }
   }
 
-  //Return the result to the form in json
+  // Return the result to the form in json.
+  drupal_json_output($matches);
+}
+
+/**
+ * Autocomplete for webform search form elements.
+ */
+function spwebformsync_webform_autocomplete($string) {
+  $string = strtolower($string);
+  $matches = array();
+  if (strlen($string) > 2) {
+    $matches = array();
+    $webforms = spwebformsync_get_webforms_list();
+
+    foreach ($webforms as $webform_id => $webform_title) {
+      if (strpos(strtolower($webform_title), $string) !== FALSE) {
+        $matches[$webform_title . ' (' . $webform_id . ')'] = $webform_title;
+      }
+      if (count($matches) > 10) {
+        break;
+      }
+    }
+  }
+
+  // Return the result to the form in json.
   drupal_json_output($matches);
 }
 

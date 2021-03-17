@@ -9,6 +9,7 @@ function spwebformsync_init() {
   module_load_include("inc", "spwebformsync", "spwebformsync.settings");
   module_load_include("inc", "spwebformsync", "components/spwebformsync.components");
   module_load_include('inc', 'webform', 'includes/webform.submissions');
+  module_load_include('inc', 'webform', 'includes/webform.components');
 }
 
 /**
@@ -63,6 +64,14 @@ function spwebformsync_menu() {
   $items['spwebformsync/group/autocomplete'] = array(
     'title' => 'SP webformsync autocomplete',
     'page callback' => 'spwebformsync_group_autocomplete',
+    'access callback' => 'spwebformsync_access_check',
+    'type' => MENU_CALLBACK,
+    'file' => 'spwebformsync.admin.inc',
+  );
+
+  $items['spwebformsync/webform/autocomplete'] = array(
+    'title' => 'SP webformsync autocomplete',
+    'page callback' => 'spwebformsync_webform_autocomplete',
     'access callback' => 'spwebformsync_access_check',
     'type' => MENU_CALLBACK,
     'file' => 'spwebformsync.admin.inc',

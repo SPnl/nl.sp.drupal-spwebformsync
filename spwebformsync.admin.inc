@@ -9,14 +9,11 @@ function spwebformsync_admin_form($form, &$form_state, $form_id = NULL) {
 
   $sync_data = variable_get('spwebformsync_sync_data', array());
   if (empty($storage['webform_id'])) {
-    if (!empty($form_id) || !empty($values['webform'])) {
-      $storage['webform_id'] = empty($form_id) ? $values['webform'] : $form_id;
+    if (!empty($form_id)) {
+      $storage['webform_id'] = $form_id;
       // Store default values.
       spwebformsync_admin_form_store_defaults($storage);
     }
-  }
-  else {
-    $storage['webform_id'] = isset($values['webform']) ? $values['webform'] : '';
   }
   $form = array();
 
@@ -54,12 +51,6 @@ function spwebformsync_admin_form($form, &$form_state, $form_id = NULL) {
     // Select form option value that subscribes contact to SP news.
     spwebformsync_variable_news_subscription_form($form, $form_state);
 
-    // Always send e-mail.
-    spwebformsync_fixed_mail_form($form, $form_state);
-
-    // Send e-mail dependent on selected form select option.
-    spwebformsync_variable_mail_form($form, $form_state);
-
     $form['submit'] = array(
       '#type'  => 'submit',
       '#name' => 'spcontact_submit',
@@ -76,13 +67,18 @@ function spwebformsync_ajax_form_callback($form, &$form_state) {
 function spwebformsync_admin_form_validate($form, &$form_state) {
   $storage = &$form_state['storage'];
   $values = $form_state['values'];
-  $webform_id = $storage['webform_id'];
+  $webform_id = empty($storage['webform_id']) ? NULL : $storage['webform_id'];
   if (!empty($form_state['triggering_element']['#name'])) {
     $trigger = $form_state['triggering_element']['#name'];
     switch ($trigger) {
-      case 'webform':
-        // Set stored values if available.
-        spwebformsync_admin_form_store_defaults($form_state, $webform_id);
+
+      case 'select_webform_submit':
+        if (!empty($values['select_webform'])) {
+          $webform_id = spwebformsync_parse_id($values['select_webform']);
+          $storage['webform_id'] = $webform_id;
+          // Set stored values if available.
+          spwebformsync_admin_form_store_defaults($storage);
+        }
         return;
 
       case 'reset_fixed_groups':
@@ -95,7 +91,7 @@ function spwebformsync_admin_form_validate($form, &$form_state) {
         // Store selected group.
         if (!empty($values['fixed_group'])) {
           $group_raw = $values['fixed_group'];
-          $group = spwebformsync_parse_group_form_select_value($group_raw);
+          $group = spwebformsync_parse_id($group_raw);
           if (!empty($group)) {
             $form_state['storage']['selected_fixed_groups'][$group] = $groups[$group];
             // Empty group field.
@@ -106,12 +102,12 @@ function spwebformsync_admin_form_validate($form, &$form_state) {
         return;
 
       case 'add_webform_comp':
-        $webform_components = spwebformsync_get_webform_allowed_components($values['webform'], array('select' => 'select', 'spcontact' => 'spcontact'));
+        $webform_components = spwebformsync_get_webform_allowed_components($webform_id, array('select' => 'select', 'spcontact' => 'spcontact'));
         $webform_component_select_options = webform_component_list($webform_id, $webform_components, FALSE);
         // Store selected webform component.
         if (!empty($values['webform_comp'])) {
           $component_id = $values['webform_comp'];
-          $storage['selected_variable_groups'][$component_id]['name'] = $webform_component_select_options[$component_id];
+          $storage['selected_variable_groups'][$component_id]['component_name'] = $webform_component_select_options[$component_id];
           // Empty group field.
           unset($form_state['input']['webform_comp']);
         }
@@ -165,82 +161,6 @@ function spwebformsync_admin_form_validate($form, &$form_state) {
     if (!empty($matches[1])) {
       unset($storage['selected_variable_groups'][$matches[1]]);
     }
-
-    // Mail.
-    /*
-    $types = array(
-      'variable',
-    );
-    foreach ($types as $type) {
-      // Add variable mail button.
-      if (preg_match('/^' . $type . '_mail_add_webform_comp$/', $trigger)) {
-        $webform_components = spwebformsync_get_webform_allowed_components($form_state['values']['webform'], array('select' => 'select'));
-        $webform_component_select_options = webform_component_list($webform_id, $webform_components, FALSE);
-        // Store selected webform component.
-        if (!empty($form_state['values'][$type . '_mail_webform_component'])) {
-          $component_id = $form_state['values'][$type . '_mail_webform_component'];
-          $storage[$type . '_mail_selected_webform_components'][$component_id]['name'] = $webform_component_select_options[$component_id];
-          // Empty group field.
-          unset($form_state['input'][$type . '_mail_webform_component']);
-        }
-        $form_state['rebuild'] = TRUE;
-        return;
-        break;
-      }
-
-      // Delete variable group syncs button.
-      preg_match('/^' . $type . '_mail_del_component_([0-9]+)$/', $trigger, $matches);
-      if (!empty($matches[1])) {
-        $sync_data = variable_get('spwebformsync_sync_data', array());
-        unset($storage[$type . '_mail_selected_webform_components'][$matches[1]]);
-        unset($sync_data[$webform_id][$type . '_mail'][$matches[1]]);
-        variable_set('spwebformsync_sync_data', $sync_data);
-      }
-
-      // Variable test mail sending.
-      preg_match('/^' . $type . '_mail_sendtest_component_([0-9]+)_value_([[a-z_]+)$/', $trigger, $matches);
-      if (!empty($matches[1]) && !empty($matches[2])) {
-        $send = TRUE;
-        $text_field = $type . '_mail_component_' . $matches[1] . '_value_' . $matches[2];
-        $subject_field = $type . '_mail_subject_component_' . $matches[1] . '_value_' . $matches[2];
-        $sender_address_field = $type . '_mail_sendermailaddress_component_' . $matches[1] . '_value_' . $matches[2];
-        $test_address_field = $type . '_mail_testmailaddress_component_' . $matches[1] . '_value_' . $matches[2];
-        if (empty($values[$text_field]['value'])) {
-          $send = FALSE;
-          form_set_error($text_field, 'De tekst van de e-mail is leeg.');
-        }
-        if (empty($values[$subject_field])) {
-          $send = FALSE;
-          form_set_error($subject_field, 'Geef de mail een onderwerp.');
-        }
-        if ($send) {
-          // Send mail.
-          $site_mail = variable_get('site_mail', ini_get('sendmail_from'));
-          $sender_mail = !empty($values[$sender_address_field]) ? $values[$sender_address_field] : $site_mail;
-          $text_raw = $values[$text_field]['value'];
-          $filter_format = $values[$text_field]['format'];
-          $text = check_markup($text_raw, $filter_format);
-          $subject = $values[$subject_field];
-
-          $params = array(
-            'text' => $text,
-            'subject' => $subject,
-          );
-          $message = drupal_mail('spwebformsync', 'sync_mail', $values[$test_address_field], language_default(), $params, $sender_mail);
-          if (!empty($message['result'])) {
-            // Mail verzonden.
-            drupal_set_message('Er is een e-mail verzonden');
-          }
-          else {
-            // Mail faal.
-            drupal_set_message('Er is iets misgegaan met het verzenden van de e-mail.');
-          }
-        }
-        $form_state['rebuild'] = TRUE;
-        return;
-      }
-    }
-    */
   }
 
   // Validate form.
@@ -282,94 +202,66 @@ function spwebformsync_admin_form_submit($form, &$form_state) {
   $groups = spwebformsync_get_groups();
   $sync_data = variable_get('spwebformsync_sync_data');
   $sync_data[$storage['webform_id']] = array();
-  // Store form values.
-  $static_fields = array(
-    'webform',
-    'fixed_mail_to_component',
-    'fixed_mail_text',
-    'fixed_mail_subject',
-    'fixed_mail_sender_emailadress',
-    'overwrite',
-    'confirmation_check',
-    'sp_news_subscription_component',
-    'sp_news_subscription_option',
-  );
-  foreach ($static_fields as $key) {
-    if (isset($values[$key])) {
-      $sync_data[$values['webform']][$key] = $values[$key];
-    }
-  }
-  // Store storage values.
-  $storage_values = array(
-    'selected_fixed_groups',
-  );
-  foreach ($storage_values as $key) {
-    if (isset($storage[$key])) {
-      $sync_data[$storage['webform_id']][$key] = $storage[$key];
-    }
-    else {
-      unset($sync_data[$storage['webform_id']][$key]);
-    }
-  }
-  // Store selected components to sync with CRM contact data.
-  foreach ($values as $key => $value) {
-    if (preg_match('/^[a-z_]+_component$/', $key)) {
-      $sync_data[$storage['webform_id']][$key] = $value;
-    }
-  }
-
-  // Store selected variable group syncs.
-  foreach ($values as $key => $value) {
-    if (!empty($value)) {
-      $result = preg_match('/^component_(.*)_value_(.*)$/', $key, $matches);
-      if (!empty($result)) {
-        $component_id = $matches[1];
-        $selected_value_id = $matches[2];
-        $component_options = spwebformsync_parse_webform_select_options($storage['webform_id'], $component_id);
-        $group = spwebformsync_parse_group_form_select_value($value);
-        $sync_data[$values['webform']]['selected_variable_groups'][$component_id]['component_id'] = $component_id;
-        $sync_data[$values['webform']]['selected_variable_groups'][$component_id]['component_name'] = $storage['webform_components'][$component_id]['name'];
-        $sync_data[$values['webform']]['selected_variable_groups'][$component_id]['values'][$selected_value_id] = array(
-          'value_id' => $selected_value_id,
-          'value_name' => $component_options[$selected_value_id],
-          'group_id' => $group,
-          'group_name' => $groups[$group],
-        );
+  $webform_id = $storage['webform_id'];
+  if (!empty($webform_id)) {
+    // Store form values.
+    $static_fields = array(
+      'fixed_mail_to_component',
+      'fixed_mail_text',
+      'fixed_mail_subject',
+      'fixed_mail_sender_emailadress',
+      'overwrite',
+      'confirmation_check',
+      'sp_news_subscription_component',
+      'sp_news_subscription_option',
+    );
+    foreach ($static_fields as $key) {
+      if (isset($values[$key])) {
+        $sync_data[$webform_id][$key] = $values[$key];
       }
     }
-  }
-  // Store selected variable mails.
-  /*
-  $types = array(
-    'variable',
-  );
-  foreach ($types as $type) {
+    // Store storage values.
+    $storage_values = array(
+      'selected_fixed_groups',
+    );
+    foreach ($storage_values as $key) {
+      if (isset($storage[$key])) {
+        $sync_data[$storage['webform_id']][$key] = $storage[$key];
+      }
+      else {
+        unset($sync_data[$storage['webform_id']][$key]);
+      }
+    }
+    // Store selected components to sync with CRM contact data.
+    foreach ($values as $key => $value) {
+      if (preg_match('/^[a-z_]+_component$/', $key)) {
+        $sync_data[$storage['webform_id']][$key] = $value;
+      }
+    }
+
+    // Store selected variable group syncs.
     foreach ($values as $key => $value) {
       if (!empty($value)) {
-        if ($key === $type . '_mail_mail_to_component') {
-          $sync_data[$values['webform']][$type . '_mail_to_component'] = $value;
-        }
-        $result = preg_match('/^' . $type . '_mail_component_(.*)_value_(.*)$/', $key, $matches);
+        $result = preg_match('/^component_(.*)_value_(.*)$/', $key, $matches);
         if (!empty($result)) {
           $component_id = $matches[1];
           $selected_value_id = $matches[2];
-          $component_options = spwebformsync_parse_webform_select_options($webform, $component_id);
-          $sync_data[$values['webform']][$type . '_mail'][$component_id]['component_id'] = $component_id;
-          $sync_data[$values['webform']][$type . '_mail'][$component_id]['component_name'] = $webform->webform['components'][$component_id]['name'];
-          $sync_data[$values['webform']][$type . '_mail'][$component_id]['values'][$selected_value_id] = array(
+          $component_options = spwebformsync_parse_webform_select_options($storage['webform_id'], $component_id);
+          $group = spwebformsync_parse_id($value);
+          $sync_data[$webform_id]['selected_variable_groups'][$component_id]['component_id'] = $component_id;
+          $sync_data[$webform_id]['selected_variable_groups'][$component_id]['component_name'] = $storage['webform_components'][$component_id]['name'];
+          $sync_data[$webform_id]['selected_variable_groups'][$component_id]['values'][$selected_value_id] = array(
             'value_id' => $selected_value_id,
             'value_name' => $component_options[$selected_value_id],
-            'mail' => $value,
-            'subject' => $values[$type . '_mail_subject_component_'.$component_id.'_value_'.$selected_value_id],
-            'sender' => $values[$type . '_mail_sendermailaddress_component_'.$component_id.'_value_'.$selected_value_id],
+            'group_id' => $group,
+            'group_name' => $groups[$group],
           );
         }
       }
     }
+    variable_set('spwebformsync_sync_data', $sync_data);
+    drupal_set_message('SP webformulier synchronisatie is toegevoegd.');
   }
-  */
-  variable_set('spwebformsync_sync_data', $sync_data);
-  drupal_set_message('SP webformulier synchronisatie is toegevoegd.');
 }
 
 function spwebformsync_settings_form($form, &$form_state) {
@@ -756,34 +648,38 @@ function spwebformsync_admin_form_store_defaults(&$storage) {
 
 function spwebformsync_select_webform_form(&$form, $form_state) {
   $storage = $form_state['storage'];
+  $webforms = spwebformsync_get_webforms_list();
   // Get data.
-  $webforms = spwebformsync_get_webforms();
-  if (!empty($webforms)) {
-    foreach ($webforms as $webform) {
-      $webform_select_options[$webform->nid] = $webform->title . ' (' . $webform->nid . ')';
-    }
-    krsort($webform_select_options);
+  if (empty($storage['webform_id'])) {
+    if (!empty($webforms)) {
+      // Select campaign.
+      $form['select_webform'] = array(
+        '#type' => 'textfield',
+        '#title' => 'Zoek het webformulier',
+        '#autocomplete_path' => 'spwebformsync/webform/autocomplete',
+      );
 
-    // Create form element.
-    $form['webform'] = array(
-      '#type' => 'select',
-      '#title' => 'Kies het webformulier',
-      '#options' => $webform_select_options,
-      '#empty_option' => 'Kies:',
-      '#name' => 'webform',
-      '#ajax' => array(
-        'wrapper' => 'spwebformsync_ajax_form',
-        'callback' => 'spwebformsync_ajax_form_callback',
-      ),
-    );
+      $form['select_webform_submit'] = array(
+        '#type' => 'button',
+        '#value' => 'Bevestig gekozen webformulier',
+        '#name' => 'select_webform_submit',
+        '#ajax' => array(
+          'wrapper' => 'spwebformsync_ajax_form',
+          'callback' => 'spwebformsync_ajax_form_callback',
+        ),
+      );
+    }
+    else {
+      $form['no_webforms'] = array(
+        '#markup' => 'Er is geen webformulier beschikbaar (<a href="/node/webform/add">voeg toe</a>).',
+      );
+    }
   }
   else {
-    $form['no_webforms'] = array(
-      '#markup' => 'Er is geen webformulier beschikbaar (<a href="/node/webform/add">voeg toe</a>).',
-    );
-  }
-  if (!empty($storage['webform_id'])) {
     // Set default value.
+    $form['webform'] = array(
+      '#markup' => '<p><strong>Webformulier: ' . $webforms[$storage['webform_id']] . '</strong></p>',
+    );
     $form['webform']['#default_value'] = $storage['webform_id'];
     unset($form['webform']['#empty_option']);
 
@@ -1074,222 +970,14 @@ function spwebformsync_variable_news_subscription_form(&$form, $form_state) {
   );
   // Select option.
   $form['variable_news_subscription_select']['#collapsed'] = FALSE;
-  $option_list = spwebformsync_parse_webform_select_options($webform_id, $storage['sp_news_subscription']['component_id']);
-  $form['variable_news_subscription_select']['sp_news_subscription_option'] = array(
-    '#title' => 'Kies de optie waarmee men zich aanmeld voor de nieuwsbrief',
-    '#type' => 'select',
-    '#empty_option' => '- geen -',
-    '#default_value' => empty($storage['sp_news_subscription']['option_key']) ? NULL : $storage['sp_news_subscription']['option_key'],
-    '#options' => $option_list,
-  );
-}
-
-function spwebformsync_fixed_mail_form(&$form, $form_state) {
-  /*
-  $storage = $form_state['storage'];
-  $webform_id = $storage['webform_id'];
-  $tokens_text = spwebformsync_get_tokens_text($webform_id);
-  $form['fixed_mail'] = array(
-    '#type' => 'fieldset',
-    '#title' => 'E-mail naar contact: altijd',
-    '#description' => $tokens_text,
-    '#collapsible' => TRUE,
-    '#collapsed' => TRUE,
-  );
-  $fixed_mail_to_component = empty($sync_data[$webform_id]) ? NULL : $sync_data[$webform_id]['fixed_mail_to_component'];
-  $default_value = empty($fixed_mail_to_component) ? array_search('E-mail', $webform_component_select_options) : $fixed_mail_to_component;
-  $form['fixed_mail']['fixed_mail_to_component'] = array(
-    '#type' => 'select',
-    '#title' => 'Selecteer het veld met het e-mailadres waar de mail heen moet.',
-    '#options' => $webform_component_select_options,
-    '#default_value' => $default_value,
-  );
-  if (!empty($sync_data[$webform->nid]['fixed_mail_subject'])) {
-    $default = $sync_data[$webform->nid]['fixed_mail_subject'];
-    $form['fixed_mail']['#collapsed'] = FALSE;
-  }
-  else {
-    $default = '';
-  }
-  $form['fixed_mail']['fixed_mail_subject'] = array(
-    '#type' => 'textfield',
-    '#title' => 'Onderwerp',
-    '#default_value' => $default,
-  );
-  if (!empty($sync_data[$webform->nid]['fixed_mail_text'])) {
-    $default = $sync_data[$webform->nid]['fixed_mail_text'];
-  }
-  else {
-    $default = '';
-  }
-  $form['fixed_mail']['fixed_mail_text'] = array(
-    '#type' => 'text_format',
-    '#title' => 'Inhoud',
-    '#description' => 'Laat leeg indien geen mail verstuurd moet worden.',
-    '#format' => isset($default['format']) ? $default['format'] : NULL,
-    '#default_value' => isset($default['value']) ? $default['value'] : '',
-  );
-
-  if (!empty($sync_data[$webform->nid]['fixed_mail_sender_emailadress'])) {
-    $default = $sync_data[$webform->nid]['fixed_mail_sender_emailadress'];
-  }
-  else {
-    $default = '';
-  }
-  $form['fixed_mail']['fixed_mail_sender_emailadress'] = array(
-    '#type' => 'textfield',
-    '#title' => 'Afzend e-mailadres',
-    '#description' => 'De afzender van de e-mails (Naam <email@adress.com>).',
-    '#default_value' => $default,
-  );
-
-  $form['fixed_mail']['fixed_mail_test_emailadress'] = array(
-    '#type' => 'textfield',
-    '#title' => 'Test e-mailadres',
-    '#description' => 'Hier wordt de testemail heen gestuurd.',
-  );
-
-  $form['fixed_mail']['fixed_mail_send_test'] = array(
-    '#type' => 'button',
-    '#value' => 'Verstuur een testmail',
-    '#name' => 'fixed_mail_send_test',
-    '#ajax' => array(
-      'wrapper' => 'spwebformsync_ajax_form',
-      'callback' => 'spwebformsync_ajax_form_callback',
-    ),
-  );
-  */
-}
-
-function spwebformsync_variable_mail_form(&$form, $form_state) {
-  /*
-  $types = array(
-    'variable',
-  );
-
-  foreach ($types as $type) {
-    $form[$type . '_mail'] = array(
-      '#type' => 'fieldset',
-      '#description' => $tokens_text,
-      '#collapsible' => TRUE,
-      '#collapsed' => TRUE,
-    );
-    $form[$type . '_mail']['#title'] = 'Email naar contact: antwoordafhankelijk';
-    $variable_mail_component = empty($sync_data[$webform->nid]) ? NULL : $sync_data[$webform->nid][$type . '_mail_to_component'];
-    $default_value = empty($variable_mail_component) ? array_search('E-mail', $webform_component_select_options) : $variable_mail_component;
-    $form[$type . '_mail'][$type . '_mail_mail_to_component'] = array(
+  if (!empty($storage['sp_news_subscription']['component_id'])) {
+    $option_list = spwebformsync_parse_webform_select_options($webform_id, $storage['sp_news_subscription']['component_id']);
+    $form['variable_news_subscription_select']['sp_news_subscription_option'] = array(
+      '#title' => 'Kies de optie waarmee men zich aanmeld voor de nieuwsbrief',
       '#type' => 'select',
-      '#title' => 'Selecteer het veld met het e-mailadres waar de mail heen moet.',
-      '#options' => $webform_component_select_options,
-      '#default_value' => $default_value,
+      '#empty_option' => '- geen -',
+      '#default_value' => empty($storage['sp_news_subscription']['option_key']) ? NULL : $storage['sp_news_subscription']['option_key'],
+      '#options' => $option_list,
     );
-    // Get webform select components.
-    $webform_components = spwebformsync_get_webform_allowed_components($storage['webform_id'], array('select' => 'select', 'spcontact' => 'spcontact'));
-    // Show selected fields.
-    if (!empty($form_state['storage'][$type . '_mail_selected_webform_components'])) {
-      $form[$type . '_mail']['#collapsed'] = FALSE;
-      foreach ($form_state['storage'][$type . '_mail_selected_webform_components'] as $component_key => $component_values) {
-        // Remove already selected components from component list.
-        unset($webform_components[$component_key]);
-        $form[$type . '_mail'][$type . '_mail_component_'.$component_key] = array(
-          '#type' => 'fieldset',
-          '#title' => 'Webform veld: '.$component_values['name'],
-        );
-        // Get webform_component options.
-        $component_options = spwebformsync_parse_webform_select_options($webform, $component_key);
-        foreach ($component_options as $key => $name) {
-          $form[$type . '_mail'][$type . '_mail_component_'.$component_key][$type . '_mailfieldset_component_'.$component_key.'_value_'.$key] = array(
-            '#type' => 'fieldset',
-            '#title' => 'Webform veldwaarde: '.$name,
-          );
-          // Get default value.
-          if (!empty($sync_data[$webform->nid][$type . '_mail'][$component_key]['values'][$key])) {
-            $default = $sync_data[$webform->nid][$type . '_mail'][$component_key]['values'][$key]['subject'];
-          }
-          else {
-            $default = '';
-          }
-          $form[$type . '_mail'][$type . '_mail_component_'.$component_key][$type . '_mailfieldset_component_'.$component_key.'_value_'.$key][$type . '_mail_subject_component_'.$component_key.'_value_'.$key] = array(
-            '#type' => 'textfield',
-            '#title' => 'Onderwerp',
-            '#default_value' => $default,
-          );
-          // Get default value.
-          if (!empty($sync_data[$webform->nid][$type . '_mail'][$component_key]['values'][$key])) {
-            $default = $sync_data[$webform->nid][$type . '_mail'][$component_key]['values'][$key]['mail'];
-          }
-          else {
-            $default = '';
-          }
-          $form[$type . '_mail'][$type . '_mail_component_'.$component_key][$type . '_mailfieldset_component_'.$component_key.'_value_'.$key][$type . '_mail_component_'.$component_key.'_value_'.$key] = array(
-            '#type' => 'text_format',
-            '#title' => 'Inhoud',
-            '#description' => 'Laat leeg indien geen mail verstuurd moet worden bij deze waarde.',
-            '#default_value' => $default,
-            '#format' => isset($default['format']) ? $default['format'] : NULL,
-            '#default_value' => isset($default['value']) ? $default['value'] : '',
-          );
-          if (!empty($sync_data[$webform->nid][$type . '_mail'][$component_key]['values'][$key])) {
-            $default = $sync_data[$webform->nid][$type . '_mail'][$component_key]['values'][$key]['sender'];
-          }
-          else {
-            $default = '';
-          }
-          $form[$type . '_mail'][$type . '_mail_component_'.$component_key][$type . '_mailfieldset_component_'.$component_key.'_value_'.$key][$type . '_mail_sendermailaddress_component_'.$component_key.'_value_'.$key] = array(
-            '#type' => 'textfield',
-            '#title' => 'Afzender e-mailadres',
-            '#description' => 'Naam <email@adress.com>',
-            '#default_value' => $default,
-          );
-          $form[$type . '_mail'][$type . '_mail_component_'.$component_key][$type . '_mailfieldset_component_'.$component_key.'_value_'.$key][$type . '_mail_testmailaddress_component_'.$component_key.'_value_'.$key] = array(
-            '#type' => 'textfield',
-            '#title' => 'test e-mailadres',
-          );
-          $form[$type . '_mail'][$type . '_mail_component_'.$component_key][$type . '_mailfieldset_component_'.$component_key.'_value_'.$key][$type . '_mail_sendtest_component_'.$component_key.'_value_'.$key] = array(
-            '#type' => 'button',
-            '#value' => 'Verstuur een testmail',
-            '#name' => $type . '_mail_sendtest_component_'.$component_key.'_value_'.$key,
-            '#ajax' => array(
-              'wrapper' => 'spwebformsync_ajax_form',
-              'callback' => 'spwebformsync_ajax_form_callback',
-            ),
-          );
-        }
-      }
-      $form[$type . '_mail'][$type . '_mail_component_'.$component_key][$type . '_mail_del_component_'.$component_key] = array(
-        '#type' => 'button',
-        '#value' => 'Verwijder',
-        '#name' => $type . '_mail_del_component_'.$component_key,
-        '#weight' => 99,
-        '#ajax' => array(
-          'wrapper' => 'spwebformsync_ajax_form',
-          'callback' => 'spwebformsync_ajax_form_callback',
-        ),
-      );
-    }
-    if (!empty($webform_components)) {
-      $webform_component_select_options = spwebformsync_get_components_list($webform_components, 'option_components_only');
-      $form[$type . '_mail'][$type . '_mail_webform_component'] = array(
-        '#type' => 'select',
-        '#title' => 'Formulier veld',
-        '#options' => $webform_component_select_options,
-        '#empty_option' => '- Geen -',
-      );
-      $form[$type . '_mail'][$type . '_mail_add_webform_comp'] = array(
-        '#type' => 'button',
-        '#value' => 'Voeg toe',
-        '#name' => $type . '_mail_add_webform_comp',
-        '#ajax' => array(
-          'wrapper' => 'spwebformsync_ajax_form',
-          'callback' => 'spwebformsync_ajax_form_callback',
-        ),
-      );
-    }
-    else {
-      $form[$type . '_mail'][$type . '_mail_no_components'] = array(
-        '#markup' => '<p>Er zijn geen geschikte webformulier velden (meer) beschikbaar.</p>',
-      );
-    }
   }
-  */
 }
