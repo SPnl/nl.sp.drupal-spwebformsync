@@ -98,7 +98,7 @@ function spwebformsync_process_submission($submission) {
     }
 
     // Filter out sumbission data without e-mail.
-    if (empty($data['selections']) && empty($data['sp_news_subscription'])) {
+    if (empty($data['selections']) && empty($data['sp_news_subscription']) && empty($data['privacy'])) {
       $filter_submissions_without_selection = variable_get('spwebformsync_filter_submissions_without_selection');
       if (!empty($filter_submissions_without_selection)) {
         spwebformsync_store_submission_sync_state($submission->nid, $submission->sid, 'no selection');
