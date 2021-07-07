@@ -383,13 +383,12 @@ function spwebformsync_send_mails($sync_data, $submission, $webform) {
   if (module_exists('spcontact')) {
     $allowed_types['spcontact'] = 'spcontact';
   }
-  $webform_components = spwebformsync_get_webform_allowed_components($webform->nid, $allowed_types);
   if (!empty($sync_data)) {
     if (!empty($sync_data['fixed_mail_text']['value'])) {
       // Send fixed mail.
       $subject = '';
-      $fixed_mail_to_component = $sync_data['fixed_mail_to_component'];
-      $parts = explode('|', $fixed_mail_to_component);
+      $mail_to_component = $sync_data['fixed_mail_to_component'];
+      $parts = explode('|', $mail_to_component);
       $mailto = '';
       if (isset($parts[1])) {
         if (!empty($submission->data[$parts[0]][$parts[1]])) {
@@ -397,8 +396,8 @@ function spwebformsync_send_mails($sync_data, $submission, $webform) {
         }
       }
       else {
-        if (!empty($submission->data[$component_id][0])) {
-          $mailto = $submission->data[$component_id][0];
+        if (!empty($submission->data[$mail_to_component][0])) {
+          $mailto = $submission->data[$mail_to_component][0];
         }
       }
       if (!empty($mailto)) {
@@ -424,9 +423,9 @@ function spwebformsync_send_mails($sync_data, $submission, $webform) {
         }
       }
       else {
-        if (!empty($submission->data[$component_id])) {
-          if (!empty($submission->data[$component_id][0])) {
-            $mailto = $submission->data[$component_id][0];
+        if (!empty($submission->data[$mail_to_component])) {
+          if (!empty($submission->data[$mail_to_component][0])) {
+            $mailto = $submission->data[$mail_to_component][0];
           }
         }
       }
