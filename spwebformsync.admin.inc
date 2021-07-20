@@ -51,6 +51,9 @@ function spwebformsync_admin_form($form, &$form_state, $form_id = NULL) {
     // Select group where contact should be added to dependend on form select option.
     spwebformsync_variable_group_select_form($form, $form_state);
 
+    // Select group where contact should be removed to dependend on form select option.
+    spwebformsync_variable_rgroup_select_form($form, $form_state);
+
     // Select form option value that subscribes contact to SP news.
     spwebformsync_variable_news_subscription_form($form, $form_state);
 
@@ -118,6 +121,19 @@ function spwebformsync_admin_form_validate($form, &$form_state) {
         $form_state['rebuild'] = TRUE;
         return;
 
+      case 'radd_webform_comp':
+        $webform_components = spwebformsync_get_webform_allowed_components($webform_id, array('select' => 'select', 'spcontact' => 'spcontact'));
+        $webform_component_select_options = webform_component_list($webform_id, $webform_components, FALSE);
+        // Store selected webform component.
+        if (!empty($values['rwebform_comp'])) {
+          $component_id = $values['rwebform_comp'];
+          $storage['selected_variable_rgroups'][$component_id]['name'] = $webform_component_select_options[$component_id];
+          // Empty group field.
+          unset($form_state['input']['rwebform_comp']);
+        }
+        $form_state['rebuild'] = TRUE;
+        return;
+
       case 'fixed_mail_send_test':
         $send = TRUE;
         if (empty($values['fixed_mail_text']['value'])) {
@@ -176,10 +192,16 @@ function spwebformsync_admin_form_validate($form, &$form_state) {
     // Delete variable group syncs button.
     preg_match('/^del_component_([0-9]+)$/', $trigger, $matches);
     if (!empty($matches[1])) {
+      unset($storage['selected_variable_rgroups'][$matches[1]]);
+    }
+
+    // Delete variable rgroup syncs button.
+    preg_match('/^rdel_component_([0-9]+)$/', $trigger, $matches);
+    if (!empty($matches[1])) {
       unset($storage['selected_variable_groups'][$matches[1]]);
     }
 
-    // Delete variable group syncs button.
+    // Delete variable mail button.
     preg_match('/^variable_mail_del_component_([0-9]+)$/', $trigger, $matches);
     if (!empty($matches[1])) {
       $sync_data = variable_get('spwebformsync_sync_data', array());
@@ -320,6 +342,26 @@ function spwebformsync_admin_form_submit($form, &$form_state) {
         $sync_data[$values['webform']]['selected_variable_groups'][$component_id]['component_id'] = $component_id;
         $sync_data[$values['webform']]['selected_variable_groups'][$component_id]['component_name'] = $storage['webform_components'][$component_id]['name'];
         $sync_data[$values['webform']]['selected_variable_groups'][$component_id]['values'][$selected_value_id] = array(
+          'value_id' => $selected_value_id,
+          'value_name' => $component_options[$selected_value_id],
+          'group_id' => $group,
+          'group_name' => $groups[$group],
+        );
+      }
+    }
+  }
+  // Store selected variable remove group syncs.
+  foreach ($values as $key => $value) {
+    if (!empty($value)) {
+      $result = preg_match('/^rcomponent_(.*)_value_(.*)$/', $key, $matches);
+      if (!empty($result)) {
+        $component_id = $matches[1];
+        $selected_value_id = $matches[2];
+        $component_options = spwebformsync_parse_webform_select_options($storage['webform_id'], $component_id);
+        $group = spwebformsync_parse_group_form_select_value($value);
+        $sync_data[$values['webform']]['rselected_variable_groups'][$component_id]['component_id'] = $component_id;
+        $sync_data[$values['webform']]['rselected_variable_groups'][$component_id]['component_name'] = $storage['webform_components'][$component_id]['name'];
+        $sync_data[$values['webform']]['rselected_variable_groups'][$component_id]['values'][$selected_value_id] = array(
           'value_id' => $selected_value_id,
           'value_name' => $component_options[$selected_value_id],
           'group_id' => $group,
@@ -692,6 +734,12 @@ function spwebformsync_admin_form_store_defaults(&$storage) {
         $storage['selected_variable_groups'][$component_id] = $data;
       }
     }
+    // Store selected variable remove groups.
+    if (!empty($sync_data[$webform_id]['rselected_variable_groups'])) {
+      foreach ($sync_data[$webform_id]['rselected_variable_groups'] as $component_id => $data) {
+        $storage['selected_variable_rgroups'][$component_id] = $data;
+      }
+    }
     // Store selected mails.
     $types = array(
       'fixed',
@@ -988,7 +1036,7 @@ function spwebformsync_variable_group_select_form(&$form, $form_state) {
         // Get default value.
         $form['variable_group_select']['component_' . $component_key]['component_' . $component_key . '_value_' . $key] = array(
           '#type' => 'textfield',
-          '#title' => '"' . $name . '" toevoegen aan Procurios selectie:',
+          '#title' => 'Bij keuze "' . $name . '" toevoegen aan Procurios selectie:',
           '#autocomplete_path' => 'spwebformsync/group/autocomplete',
           '#default_value' => $default,
         );
@@ -1025,6 +1073,82 @@ function spwebformsync_variable_group_select_form(&$form, $form_state) {
   }
   else {
     $form['variable_group_select']['variable_group_select_no_components'] = array(
+      '#markup' => '<p>Er zijn geen geschikte webformulier velden (meer) beschikbaar.</p>',
+    );
+  }
+}
+
+function spwebformsync_variable_rgroup_select_form(&$form, $form_state) {
+  $storage = $form_state['storage'];
+  $webform_id = $storage['webform_id'];
+  $form['variable_rgroup_select'] = array(
+    '#type' => 'fieldset',
+    '#title' => 'Verwijder het contact afhankelijk van gemaakte keuzes uit de volgende selectie(s):',
+    '#collapsible' => TRUE,
+    '#collapsed' => TRUE,
+  );
+  // Get webform select components.
+  $webform_components = spwebformsync_get_webform_allowed_components($webform_id, array('select' => 'select', 'spcontact' => 'spcontact'));
+  // Show selected fields.
+  if (!empty($storage['selected_variable_rgroups'])) {
+    $form['variable_rgroup_select']['#collapsed'] = FALSE;
+    foreach ($storage['selected_variable_rgroups'] as $component_key => $component_values) {
+      // Remove already selected components from component list.
+      unset($webform_components[$component_key]);
+      $form['variable_rgroup_select']['rcomponent_' . $component_key] = array(
+        '#type' => 'fieldset',
+        '#title' => 'Webform veld: ' . $component_values['component_name'],
+      );
+      // Get webform_component options.
+      $component_options = spwebformsync_parse_webform_select_options($webform_id, $component_key);
+      foreach ($component_options as $key => $name) {
+        if (!empty($storage['selected_variable_rgroups'][$component_key]['values'][$key])) {
+          $var_values = $storage['selected_variable_rgroups'][$component_key]['values'][$key];
+          $default = $var_values['group_name'] . ' (' . $var_values['group_id'] . ')';
+        }
+        else {
+          $default = '';
+        }
+        // Get default value.
+        $form['variable_rgroup_select']['rcomponent_' . $component_key]['rcomponent_' . $component_key . '_value_' . $key] = array(
+          '#type' => 'textfield',
+          '#title' => 'Bij keuze "' . $name . '" verwijderen uit Procurios selectie:',
+          '#autocomplete_path' => 'spwebformsync/group/autocomplete',
+          '#default_value' => $default,
+        );
+        $form['variable_rgroup_select']['rcomponent_' . $component_key]['rdel_component_' . $component_key] = array(
+          '#type' => 'button',
+          '#value' => 'Verwijder',
+          '#name' => 'rdel_component_' . $component_key,
+          '#weight' => 99,
+          '#ajax' => array(
+            'wrapper' => 'spwebformsync_ajax_form',
+            'callback' => 'spwebformsync_ajax_form_callback',
+          ),
+        );
+      }
+    }
+  }
+  if (!empty($webform_components)) {
+    $webform_component_select_options = spwebformsync_get_components_list($webform_components, 'option_components_only');
+    $form['variable_rgroup_select']['rwebform_comp'] = array(
+      '#type' => 'select',
+      '#title' => 'Formulier veld',
+      '#options' => $webform_component_select_options,
+      '#empty_option' => '- Geen -',
+    );
+    $form['variable_rgroup_select']['radd_webform_comp'] = array(
+      '#type' => 'button',
+      '#value' => 'Voeg toe',
+      '#name' => 'radd_webform_comp',
+      '#ajax' => array(
+        'wrapper' => 'spwebformsync_ajax_form',
+        'callback' => 'spwebformsync_ajax_form_callback',
+      ),
+    );
+  }
+  else {
+    $form['variable_rgroup_select']['variable_rgroup_select_no_components'] = array(
       '#markup' => '<p>Er zijn geen geschikte webformulier velden (meer) beschikbaar.</p>',
     );
   }

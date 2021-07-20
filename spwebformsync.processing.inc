@@ -40,6 +40,12 @@ function spwebformsync_process_submission($submission) {
       $data['selections']['add'] = $groups;
     }
 
+    // Parse rgroups.
+    $groups = spwebformsync_parse_rgroups($submission, $sync_data);
+    if (!empty($groups)) {
+      $data['selections']['remove'] = $groups;
+    }
+
     // Parse sp news.
     $sp_news_subscription = spwebformsync_parse_sp_news_subscription($submission, $sync_data);
     if ($sp_news_subscription) {
@@ -157,6 +163,28 @@ function spwebformsync_parse_groups($submission, $sync_data) {
   $submission_data = $submission->data;
   if (!empty($sync_data['selected_variable_groups'])) {
     foreach ($sync_data['selected_variable_groups'] as $sync_values) {
+      $sync_component_id = $sync_values['component_id'];
+      if (!empty($submission_data[$sync_component_id])) {
+        foreach ($sync_values['values'] as $sync_field_group_data) {
+          if (in_array($sync_field_group_data['value_id'], $submission_data[$sync_component_id])) {
+            $groups[$sync_field_group_data['group_id']] = $sync_field_group_data['group_id'];
+          }
+        }
+      }
+    }
+  }
+  return $groups;
+}
+
+/**
+ * Parses submission data with sync info in raw data array to sync.
+ */
+function spwebformsync_parse_rgroups($submission, $sync_data) {
+  $groups = array();
+  // Get variable groups.
+  $submission_data = $submission->data;
+  if (!empty($sync_data['rselected_variable_groups'])) {
+    foreach ($sync_data['rselected_variable_groups'] as $sync_values) {
       $sync_component_id = $sync_values['component_id'];
       if (!empty($submission_data[$sync_component_id])) {
         foreach ($sync_values['values'] as $sync_field_group_data) {
