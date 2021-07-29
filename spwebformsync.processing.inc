@@ -250,6 +250,9 @@ function spwebformsync_store_submission_sync_state($nid, $sid, $state) {
     $result = db_query($query, array(':nid' => $nid, ':sid' => $sid));
     $old_state = $result->fetchField(0);
     if ($old_state !== FALSE) {
+      if ($old_state == 2 && $new_state == 2) {
+        $new_state = 9;
+      }
       if ($old_state != $new_state) {
         // Update existing state.
         $updated = db_update('spwebformsync_syncstate')
@@ -696,6 +699,7 @@ function spwebformsync_get_states() {
     'no selection' => '6',
     'processing' => '7',
     'beltool not answered completed' => '8',
+    'error after second try' => '9',
   );
   return $states;
 }
