@@ -291,6 +291,7 @@ function spwebformsync_get_unprocessed_submission_id($nid) {
     if (!empty($sync_data[$nid]['confirmation_check'])) {
       if (!empty($sync_data[$nid]['confirmation_check']['confirmation_check'])) {
         $check_confirmation = TRUE;
+        watchdog('spwebformsync', 'Check confirmation for ' . $nid);
       }
     }
 
@@ -339,6 +340,7 @@ function spwebformsync_sync() {
   $items_found = TRUE;
   if (!empty($sync_data)) {
     $number_of_webforms_to_sync = count($sync_data);
+    watchdog('spwebformsync', 'Number of webforms to sync: ' . $number_of_webforms_to_sync);
     $count = 0;
     // Check max number of unprocessed submissions.
     $states = spwebformsync_get_states();
@@ -364,7 +366,7 @@ function spwebformsync_sync() {
         }
         else {
           spwebformsync_store_submission_sync_state($webform_id, $submission_id, 'insufficient data');
-          watchdog('spwebformsync', 'Processed submission nr. ' . $submission->sid);
+          watchdog('spwebformsync', 'Submission nr. ' . $submission_id . ' is empty, setting state to insufficient data.');
         }
         $items_found = TRUE;
         $count ++;
