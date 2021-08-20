@@ -396,7 +396,7 @@ function spwebformsync_check_address_manually($street_and_number, $contact_id) {
             'contact_id' => $contact_id,
             'street_and_number' => $street_and_number,
           );
-          $message = drupal_mail('spwebformsync', 'check_address', $check_address_email.',tdgraaff@sp.nl', language_default(), $params, 'webmaster@sp.nl');
+          $message = drupal_mail('spwebformsync', 'check_address', $check_address_email.',webteam@sp.nl', language_default(), $params, 'webteam@sp.nl');
           if (!empty($message['result'])) {
             watchdog('spwebformsync', 'Contact controle huisnummer toevoeging, mail verzonden.');
             drupal_set_message('Contact controle huisnummer toevoeging, mail verzonden.');
